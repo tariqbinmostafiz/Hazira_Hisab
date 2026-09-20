@@ -68,10 +68,10 @@ fun SettingsScreen(
     onUpdateDefaultRate: (Long) -> Unit,
     onUpdateThemeMode: (String) -> Unit,
     onUpdateBengaliDigits: (Boolean) -> Unit,
-    onLoadDemoData: () -> Unit,
     onClearAllData: () -> Unit,
     onExportBackup: suspend () -> String,
     onRestoreBackup: suspend (String) -> Unit,
+    onLoadDemoData: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -80,7 +80,6 @@ fun SettingsScreen(
     var showRateDialog by remember { mutableStateOf(false) }
     var showThemeDialog by remember { mutableStateOf(false) }
     var showResetDialog by remember { mutableStateOf(false) }
-    var showDemoConfirmDialog by remember { mutableStateOf(false) }
 
     // File picker for JSON restore
     val filePickerLauncher = rememberLauncherForActivityResult(
@@ -228,7 +227,7 @@ fun SettingsScreen(
             }
         }
 
-        // Section: Data Backup & Restore
+        // Section: Data Backup & Management
         item {
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -238,7 +237,7 @@ fun SettingsScreen(
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
-                        text = "ডাটা ব্যাকআপ ও পুনরুদ্ধার",
+                        text = "ডাটা ব্যবস্থাপনা ও ব্যাকআপ",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary
@@ -273,41 +272,12 @@ fun SettingsScreen(
                         onClick = { filePickerLauncher.launch("*/*") },
                         testTag = "settings_backup_import"
                     )
-                }
-            }
-        }
-
-        // Section: Testing & Demo Data
-        item {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        text = "পরীক্ষামূলক ও ডাটা ব্যবস্থাপনা",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    SettingsRowItem(
-                        icon = Icons.Default.Science,
-                        title = "নমুনা ডেমো হিসাব লোড করুন",
-                        subtitle = "অ্যাপের কার্যকারিতা দেখার জন্য কিছু নমুনা হাজিরা ও খরচের হিসাব যোগ হবে",
-                        onClick = { showDemoConfirmDialog = true },
-                        testTag = "settings_demo_data"
-                    )
 
                     Spacer(modifier = Modifier.height(12.dp))
 
                     SettingsRowItem(
                         icon = Icons.Default.DeleteForever,
-                        title = "সমস্ত হিসাব মুছে ফেলুন (রিসেট)",
+                        title = "সমস্ত হিসাব মুছে ফেলুন (ডাটা রিসেট)",
                         subtitle = "ডাটাবেজের সকল হাজিরা, টাকা পাওয়া ও খরচের তথ্য সম্পূর্ণ ডিলিট হবে",
                         iconTint = MaterialTheme.colorScheme.error,
                         onClick = { showResetDialog = true },
@@ -335,7 +305,7 @@ fun SettingsScreen(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "হাজিরা হিসাব (ভার্সন ১.০)",
+                            text = "হাজিরা হিসাব (ভার্সন ১.১)",
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.Bold
                         )
@@ -453,20 +423,6 @@ fun SettingsScreen(
                     Text("বন্ধ করুন")
                 }
             }
-        )
-    }
-
-    // Demo Data confirmation dialog
-    if (showDemoConfirmDialog) {
-        ConfirmDeleteDialog(
-            title = "নমুনা ডেমো ডাটা লোড করবেন?",
-            message = "ডেমো ডাটা লোড করলে কিছু কাজের হাজিরা, টাকা পাওয়া ও খরচের নমুনা তথ্য যোগ হবে যাতে আপনি অ্যাপের হিসাব নিকাশ দেখতে পারেন।",
-            confirmText = "হ্যাঁ, লোড করুন",
-            onConfirm = {
-                onLoadDemoData()
-                showDemoConfirmDialog = false
-            },
-            onDismiss = { showDemoConfirmDialog = false }
         )
     }
 

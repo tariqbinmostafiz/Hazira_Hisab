@@ -136,7 +136,7 @@ fun ReportsScreen(
                                 color = if (periodSummary.cashInHandPoisha >= 0) Color(0xFF1B5E20) else Color(0xFFB71C1C)
                             )
                             Text(
-                                text = "মোট প্রাপ্ত টাকা থেকে মোট খরচ বাদে",
+                                text = "মোট পাওয়া টাকা থেকে খরচ বাদে",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = Color.Black.copy(alpha = 0.6f)
                             )

@@ -313,8 +313,16 @@ class LedgerViewModel(application: Application) : AndroidViewModel(application) 
 
         var food = 0L
         var other = 0L
+        var duesDeduction = 0L
         for (e in filteredExps) {
-            if (e.category == "খাবার") food += e.amountInPoisha else other += e.amountInPoisha
+            if (e.category == "খাবার") {
+                food += e.amountInPoisha
+            } else {
+                other += e.amountInPoisha
+            }
+            if (e.isDeductedFromDues) {
+                duesDeduction += e.amountInPoisha
+            }
         }
 
         return FinancialSummary(
@@ -323,7 +331,8 @@ class LedgerViewModel(application: Application) : AndroidViewModel(application) 
             totalReceivedPoisha = received,
             totalExpensePoisha = food + other,
             foodExpensePoisha = food,
-            otherExpensePoisha = other
+            otherExpensePoisha = other,
+            deductedFromDuesPoisha = duesDeduction
         )
     }
 }

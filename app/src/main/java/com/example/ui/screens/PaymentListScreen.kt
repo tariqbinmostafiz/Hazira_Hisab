@@ -274,7 +274,7 @@ fun PaymentEntryCard(
                         )
                         if (payment.payer.isNotBlank()) {
                             Text(
-                                text = "প্রদানকারী: ${payment.payer}",
+                                text = "মালিক: ${payment.payer}",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
