@@ -1,0 +1,527 @@
+package com.example.ui.screens
+
+import android.content.Intent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AttachMoney
+import androidx.compose.material.icons.filled.Backup
+import androidx.compose.material.icons.filled.Brightness4
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.CloudDownload
+import androidx.compose.material.icons.filled.DeleteForever
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Numbers
+import androidx.compose.material.icons.filled.Restore
+import androidx.compose.material.icons.filled.Science
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.dp
+import com.example.domain.model.CurrencyFormatter
+import com.example.ui.components.ConfirmDeleteDialog
+import kotlinx.coroutines.launch
+
+@Composable
+fun SettingsScreen(
+    defaultRatePoisha: Long,
+    themeMode: String,
+    useBengaliDigits: Boolean,
+    onUpdateDefaultRate: (Long) -> Unit,
+    onUpdateThemeMode: (String) -> Unit,
+    onUpdateBengaliDigits: (Boolean) -> Unit,
+    onLoadDemoData: () -> Unit,
+    onClearAllData: () -> Unit,
+    onExportBackup: suspend () -> String,
+    onRestoreBackup: suspend (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+
+    var showRateDialog by remember { mutableStateOf(false) }
+    var showThemeDialog by remember { mutableStateOf(false) }
+    var showResetDialog by remember { mutableStateOf(false) }
+    var showDemoConfirmDialog by remember { mutableStateOf(false) }
+
+    // File picker for JSON restore
+    val filePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        if (uri != null) {
+            scope.launch {
+                try {
+                    val inputStream = context.contentResolver.openInputStream(uri)
+                    val json = inputStream?.bufferedReader()?.use { it.readText() } ?: ""
+                    if (json.isNotBlank()) {
+                        onRestoreBackup(json)
+                    }
+                } catch (_: Exception) {
+                    // Handled inside ViewModel
+                }
+            }
+        }
+    }
+
+    LazyColumn(
+        modifier = modifier
+            .fillMaxSize()
+            .testTag("settings_screen"),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 96.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        // Screen Header
+        item {
+            Column {
+                Text(
+                    text = "সেটিংস ও ব্যাকআপ",
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+                Text(
+                    text = "হাজিরার দর, রূপরেখা এবং ব্যক্তিগত তথ্যের সুরক্ষা",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+
+        // Section: Work Rate
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        text = "কাজের মজুরি বা হাজিরার রেট",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    SettingsRowItem(
+                        icon = Icons.Default.AttachMoney,
+                        title = "১ হাজিরার ডিফল্ট মূল্য",
+                        subtitle = "বর্তমান নির্ধারিত রেট: ${CurrencyFormatter.formatTaka(defaultRatePoisha, useBengaliDigits)}",
+                        onClick = { showRateDialog = true },
+                        testTag = "settings_rate_item"
+                    )
+                }
+            }
+        }
+
+        // Section: Appearance & Localization
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        text = "প্রদর্শন ও ভাষা",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    val themeLabel = when (themeMode) {
+                        "LIGHT" -> "লাইট মোড"
+                        "DARK" -> "ডার্ক মোড"
+                        else -> "সিস্টেম অনুযায়ী"
+                    }
+                    SettingsRowItem(
+                        icon = Icons.Default.Brightness4,
+                        title = "থিম ও রূপরেখা",
+                        subtitle = themeLabel,
+                        onClick = { showThemeDialog = true },
+                        testTag = "settings_theme_item"
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Numbers,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
+                                Text(
+                                    text = "বাংলা সংখ্যা ব্যবহার (০-৯)",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = if (useBengaliDigits) "বাংলা সংখ্যা প্রদর্শিত হচ্ছে" else "ইংরেজি সংখ্যা (0-9) প্রদর্শিত হচ্ছে",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                        Switch(
+                            checked = useBengaliDigits,
+                            onCheckedChange = { onUpdateBengaliDigits(it) },
+                            modifier = Modifier.testTag("switch_bengali_digits")
+                        )
+                    }
+                }
+            }
+        }
+
+        // Section: Data Backup & Restore
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        text = "ডাটা ব্যাকআপ ও পুনরুদ্ধার",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    SettingsRowItem(
+                        icon = Icons.Default.Backup,
+                        title = "হিসাবের ব্যাকআপ ফাইল তৈরি ও শেয়ার",
+                        subtitle = "সমস্ত হিসাব সুরক্ষিত JSON ফাইল হিসেবে সংরক্ষণ বা হোয়াটসঅ্যাপে শেয়ার করুন",
+                        onClick = {
+                            scope.launch {
+                                val json = onExportBackup()
+                                val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                    type = "application/json"
+                                    putExtra(Intent.EXTRA_SUBJECT, "Hazira_Hisab_Backup.json")
+                                    putExtra(Intent.EXTRA_TEXT, json)
+                                }
+                                context.startActivity(Intent.createChooser(shareIntent, "ব্যাকআপ শেয়ার করুন"))
+                            }
+                        },
+                        testTag = "settings_backup_export"
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    SettingsRowItem(
+                        icon = Icons.Default.Restore,
+                        title = "ব্যাকআপ থেকে ডাটা ফিরিয়ে আনুন",
+                        subtitle = "পূর্বে সংরক্ষিত ব্যাকআপ ফাইল সিলেক্ট করে সমস্ত হিসাব পুনরুদ্ধার করুন",
+                        onClick = { filePickerLauncher.launch("*/*") },
+                        testTag = "settings_backup_import"
+                    )
+                }
+            }
+        }
+
+        // Section: Testing & Demo Data
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        text = "পরীক্ষামূলক ও ডাটা ব্যবস্থাপনা",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    SettingsRowItem(
+                        icon = Icons.Default.Science,
+                        title = "নমুনা ডেমো হিসাব লোড করুন",
+                        subtitle = "অ্যাপের কার্যকারিতা দেখার জন্য কিছু নমুনা হাজিরা ও খরচের হিসাব যোগ হবে",
+                        onClick = { showDemoConfirmDialog = true },
+                        testTag = "settings_demo_data"
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    SettingsRowItem(
+                        icon = Icons.Default.DeleteForever,
+                        title = "সমস্ত হিসাব মুছে ফেলুন (রিসেট)",
+                        subtitle = "ডাটাবেজের সকল হাজিরা, টাকা পাওয়া ও খরচের তথ্য সম্পূর্ণ ডিলিট হবে",
+                        iconTint = MaterialTheme.colorScheme.error,
+                        onClick = { showResetDialog = true },
+                        testTag = "settings_reset_data"
+                    )
+                }
+            }
+        }
+
+        // Section: About & Privacy
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                )
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "হাজিরা হিসাব (ভার্সন ১.০)",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = "এটি ১০০% অফলাইন ব্যক্তিগত খাতা। আপনার কোনো আর্থিক তথ্য বা কাজের হিসাব কোনো সার্ভারে পাঠানো হয় না। সকল হিসাব কেবলমাত্র আপনার এই মোবাইলেই সুরক্ষিত থাকে।",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+    }
+
+    // Rate update dialog
+    if (showRateDialog) {
+        var inputRate by remember {
+            mutableStateOf(CurrencyFormatter.poishaToTakaInput(defaultRatePoisha))
+        }
+        AlertDialog(
+            onDismissRequest = { showRateDialog = false },
+            title = {
+                Text(
+                    text = "১ হাজিরার ডিফল্ট মূল্য নির্ধারণ",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Column {
+                    Text(
+                        text = "নতুন কাজ যোগ করার সময় এই রেটটি স্বয়ংক্রিয়ভাবে বসবে। তবে পুরনো কাজের রেট অপরিবর্তিত থাকবে।",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    OutlinedTextField(
+                        value = inputRate,
+                        onValueChange = { inputRate = it },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("dialog_default_rate_input"),
+                        leadingIcon = { Text("৳ ", fontWeight = FontWeight.Bold) },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val poisha = CurrencyFormatter.takaToPoisha(inputRate)
+                        if (poisha > 0) {
+                            onUpdateDefaultRate(poisha)
+                        }
+                        showRateDialog = false
+                    },
+                    modifier = Modifier.testTag("dialog_save_rate_btn")
+                ) {
+                    Text("সংরক্ষণ করুন")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showRateDialog = false }) {
+                    Text("বাতিল")
+                }
+            }
+        )
+    }
+
+    // Theme selector dialog
+    if (showThemeDialog) {
+        AlertDialog(
+            onDismissRequest = { showThemeDialog = false },
+            title = {
+                Text(
+                    text = "থিম নির্বাচন করুন",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Column {
+                    listOf(
+                        "SYSTEM" to "সিস্টেম অনুযায়ী (স্বয়ংক্রিয়)",
+                        "LIGHT" to "লাইট মোড (সাদা)",
+                        "DARK" to "ডার্ক মোড (কালো)"
+                    ).forEach { (mode, label) ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    onUpdateThemeMode(mode)
+                                    showThemeDialog = false
+                                }
+                                .padding(vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = themeMode == mode,
+                                onClick = {
+                                    onUpdateThemeMode(mode)
+                                    showThemeDialog = false
+                                }
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(text = label, style = MaterialTheme.typography.bodyMedium)
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showThemeDialog = false }) {
+                    Text("বন্ধ করুন")
+                }
+            }
+        )
+    }
+
+    // Demo Data confirmation dialog
+    if (showDemoConfirmDialog) {
+        ConfirmDeleteDialog(
+            title = "নমুনা ডেমো ডাটা লোড করবেন?",
+            message = "ডেমো ডাটা লোড করলে কিছু কাজের হাজিরা, টাকা পাওয়া ও খরচের নমুনা তথ্য যোগ হবে যাতে আপনি অ্যাপের হিসাব নিকাশ দেখতে পারেন।",
+            confirmText = "হ্যাঁ, লোড করুন",
+            onConfirm = {
+                onLoadDemoData()
+                showDemoConfirmDialog = false
+            },
+            onDismiss = { showDemoConfirmDialog = false }
+        )
+    }
+
+    // Reset confirmation dialog
+    if (showResetDialog) {
+        ConfirmDeleteDialog(
+            title = "সকল হিসাব সম্পূর্ণ মুছে ফেলতে চান?",
+            message = "সতর্কতা: এই কাজটি করলে আপনার সমস্ত কাজের হাজিরা, টাকা পাওয়া ও খরচের এন্ট্রি স্থায়ীভাবে মুছে যাবে।",
+            confirmText = "সব মুছে ফেলুন",
+            onConfirm = {
+                onClearAllData()
+                showResetDialog = false
+            },
+            onDismiss = { showResetDialog = false }
+        )
+    }
+}
+
+@Composable
+fun SettingsRowItem(
+    icon: ImageVector,
+    title: String,
+    subtitle: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    iconTint: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.primary,
+    testTag: String = "settings_row"
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+            .padding(vertical = 8.dp)
+            .testTag(testTag),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = iconTint,
+            modifier = Modifier.size(24.dp)
+        )
+        Spacer(modifier = Modifier.width(14.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}

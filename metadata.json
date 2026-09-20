@@ -1,0 +1,7 @@
+{
+  "name": "হাজিরা হিসাব",
+  "description": "দৈনিক শ্রমিকের কাজের হাজিরা, আয়, টাকা পাওয়া, বকেয়া ও খরচের স্বয়ংসম্পূর্ণ ডিজিটাল খাতা",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+
