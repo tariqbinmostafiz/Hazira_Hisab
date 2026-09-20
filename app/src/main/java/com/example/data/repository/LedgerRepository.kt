@@ -102,12 +102,14 @@ class LedgerRepository(
             }
             val received = payments.sumOf { it.amountInPoisha }
             val expense = expenses.sumOf { it.amountInPoisha }
+            val duesDeductions = expenses.filter { it.isDeductedFromDues }.sumOf { it.amountInPoisha }
             DailySummary(
                 date = today,
                 attendanceUnits = att,
                 earnedPoisha = earned,
                 receivedPoisha = received,
-                expensePoisha = expense
+                expensePoisha = expense,
+                deductedFromDuesPoisha = duesDeductions
             )
         }
     }
@@ -138,11 +140,15 @@ class LedgerRepository(
 
         var foodExpense = 0L
         var otherExpense = 0L
+        var duesDeduction = 0L
         for (e in expenses) {
             if (e.category == "খাবার") {
                 foodExpense += e.amountInPoisha
             } else {
                 otherExpense += e.amountInPoisha
+            }
+            if (e.isDeductedFromDues) {
+                duesDeduction += e.amountInPoisha
             }
         }
         val totalExpense = foodExpense + otherExpense
@@ -153,7 +159,8 @@ class LedgerRepository(
             totalReceivedPoisha = totalReceived,
             totalExpensePoisha = totalExpense,
             foodExpensePoisha = foodExpense,
-            otherExpensePoisha = otherExpense
+            otherExpensePoisha = otherExpense,
+            deductedFromDuesPoisha = duesDeduction
         )
     }
 
@@ -197,13 +204,18 @@ class LedgerRepository(
             }
 
             for (e in expenses) {
+                val expenseSub = if (e.isDeductedFromDues) {
+                    if (e.note.isNotBlank()) "পাওনা টাকা থেকে কাটা • ${e.note}" else "পাওনা টাকা থেকে কাটা হয়েছে"
+                } else {
+                    if (e.note.isNotBlank()) e.note else "ব্যক্তিগত খরচ"
+                }
                 list.add(
                     RecentActivityItem(
                         id = e.id,
                         type = TransactionType.EXPENSE,
                         date = e.date,
                         title = "খরচ: ${e.category}",
-                        subtitle = if (e.note.isNotBlank()) e.note else "ব্যক্তিগত খরচ",
+                        subtitle = expenseSub,
                         amountPoisha = e.amountInPoisha,
                         timestamp = e.createdAt
                     )
@@ -377,6 +389,7 @@ class LedgerRepository(
             obj.put("amountInPoisha", e.amountInPoisha)
             obj.put("category", e.category)
             obj.put("note", e.note)
+            obj.put("paymentSource", e.paymentSource)
             expensesArray.put(obj)
         }
         root.put("expenses", expensesArray)
@@ -444,7 +457,8 @@ class LedgerRepository(
                         date = obj.optString("date", CurrencyFormatter.todayIso()),
                         amountInPoisha = obj.optLong("amountInPoisha", 0L),
                         category = obj.optString("category", "খাবার"),
-                        note = obj.optString("note", "")
+                        note = obj.optString("note", ""),
+                        paymentSource = obj.optString("paymentSource", ExpenseEntity.SOURCE_CASH)
                     )
                 )
                 count++

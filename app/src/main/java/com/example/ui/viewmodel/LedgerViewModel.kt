@@ -178,7 +178,8 @@ class LedgerViewModel(application: Application) : AndroidViewModel(application) 
         date: String,
         amountInPoisha: Long,
         category: String,
-        note: String
+        note: String,
+        paymentSource: String = ExpenseEntity.SOURCE_CASH
     ) {
         viewModelScope.launch {
             val expense = ExpenseEntity(
@@ -186,7 +187,8 @@ class LedgerViewModel(application: Application) : AndroidViewModel(application) 
                 date = date,
                 amountInPoisha = amountInPoisha,
                 category = category,
-                note = note
+                note = note,
+                paymentSource = paymentSource
             )
             repository.saveExpense(expense)
             _snackbarMessage.emit("খরচের হিসাব সংরক্ষণ করা হয়েছে")

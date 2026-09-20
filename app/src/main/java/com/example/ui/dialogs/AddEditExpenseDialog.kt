@@ -3,6 +3,7 @@ package com.example.ui.dialogs
 import android.app.DatePickerDialog
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,12 +15,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -29,6 +32,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -57,7 +61,7 @@ fun AddEditExpenseDialog(
     initialExpense: ExpenseEntity? = null,
     useBengaliDigits: Boolean,
     onDismiss: () -> Unit,
-    onSave: (date: String, amountInPoisha: Long, category: String, note: String) -> Unit
+    onSave: (date: String, amountInPoisha: Long, category: String, note: String, paymentSource: String) -> Unit
 ) {
     val context = LocalContext.current
     val today = LocalDate.now()
@@ -65,13 +69,16 @@ fun AddEditExpenseDialog(
     var selectedDate by remember {
         mutableStateOf(initialExpense?.date ?: today.format(DateTimeFormatter.ISO_LOCAL_DATE))
     }
+    var selectedCategory by remember {
+        mutableStateOf(initialExpense?.category ?: "খাবার")
+    }
     var amountText by remember {
         mutableStateOf(
             if (initialExpense != null) CurrencyFormatter.poishaToTakaInput(initialExpense.amountInPoisha) else ""
         )
     }
-    var selectedCategory by remember {
-        mutableStateOf(initialExpense?.category ?: "খাবার")
+    var paymentSource by remember {
+        mutableStateOf(initialExpense?.paymentSource ?: ExpenseEntity.SOURCE_CASH)
     }
     var noteText by remember {
         mutableStateOf(initialExpense?.note ?: "")
@@ -190,6 +197,32 @@ fun AddEditExpenseDialog(
 
                 Spacer(modifier = Modifier.height(14.dp))
 
+                // Category selection
+                Text(
+                    text = "খরচের খাত",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontWeight = FontWeight.Medium
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    listOf("খাবার", "অন্যান্য", "যাতায়াত", "চিকিৎসা").forEach { cat ->
+                        FilterChip(
+                            selected = selectedCategory == cat,
+                            onClick = { selectedCategory = cat },
+                            label = { Text(cat) },
+                            modifier = Modifier.testTag("expense_cat_$cat")
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+
                 // Amount
                 Text(
                     text = "খরচের পরিমাণ (টাকা)",
@@ -207,7 +240,7 @@ fun AddEditExpenseDialog(
                     modifier = Modifier
                         .fillMaxWidth()
                         .testTag("expense_amount_input"),
-                    placeholder = { Text("১০০ বা ২৫০") },
+                    placeholder = { Text("১২০ বা ১৫০") },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     shape = RoundedCornerShape(12.dp),
@@ -225,14 +258,22 @@ fun AddEditExpenseDialog(
                 // Quick amount chips
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    listOf("50", "100", "200", "500").forEach { quickAmount ->
+                    listOf("120", "150", "300", "500").forEach { quickAmount ->
                         val chipText = "৳ ${if (useBengaliDigits) CurrencyFormatter.convertToBengaliDigits(quickAmount) else quickAmount}"
                         FilterChip(
                             selected = amountText == quickAmount,
-                            onClick = { amountText = quickAmount },
+                            onClick = {
+                                amountText = quickAmount
+                                errorMessage = null
+                                if (quickAmount == "120" && selectedCategory == "খাবার") {
+                                    paymentSource = ExpenseEntity.SOURCE_DEDUCTED_FROM_DUES
+                                }
+                            },
                             label = { Text(chipText) },
                             modifier = Modifier.testTag("quick_expense_$quickAmount")
                         )
@@ -241,25 +282,97 @@ fun AddEditExpenseDialog(
 
                 Spacer(modifier = Modifier.height(14.dp))
 
-                // Category selection
+                // Payment Source Option
                 Text(
-                    text = "খরচের খাত",
+                    text = "টাকা পরিশোধের উৎস",
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurface,
                     fontWeight = FontWeight.Medium
                 )
                 Spacer(modifier = Modifier.height(6.dp))
-                Row(
+                Card(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                    )
                 ) {
-                    listOf("খাবার", "অন্যান্য", "যাতায়াত", "চিকিৎসা").forEach { cat ->
-                        FilterChip(
-                            selected = selectedCategory == cat,
-                            onClick = { selectedCategory = cat },
-                            label = { Text(cat) },
-                            modifier = Modifier.testTag("expense_cat_$cat")
-                        )
+                    Column(modifier = Modifier.padding(vertical = 4.dp, horizontal = 6.dp)) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .selectable(
+                                    selected = (paymentSource == ExpenseEntity.SOURCE_CASH),
+                                    onClick = { paymentSource = ExpenseEntity.SOURCE_CASH }
+                                )
+                                .padding(horizontal = 8.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = (paymentSource == ExpenseEntity.SOURCE_CASH),
+                                onClick = { paymentSource = ExpenseEntity.SOURCE_CASH },
+                                modifier = Modifier.testTag("source_cash_radio")
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "হাতে থাকা টাকা থেকে",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = if (paymentSource == ExpenseEntity.SOURCE_CASH) FontWeight.SemiBold else FontWeight.Normal
+                            )
+                        }
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .selectable(
+                                    selected = (paymentSource == ExpenseEntity.SOURCE_DEDUCTED_FROM_DUES),
+                                    onClick = { paymentSource = ExpenseEntity.SOURCE_DEDUCTED_FROM_DUES }
+                                )
+                                .padding(horizontal = 8.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = (paymentSource == ExpenseEntity.SOURCE_DEDUCTED_FROM_DUES),
+                                onClick = { paymentSource = ExpenseEntity.SOURCE_DEDUCTED_FROM_DUES },
+                                modifier = Modifier.testTag("source_dues_radio")
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "পাওনা টাকা থেকে কাটবে",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = if (paymentSource == ExpenseEntity.SOURCE_DEDUCTED_FROM_DUES) FontWeight.Bold else FontWeight.Normal,
+                                color = if (paymentSource == ExpenseEntity.SOURCE_DEDUCTED_FROM_DUES) Color(0xFFE65100) else MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+
+                        if (paymentSource == ExpenseEntity.SOURCE_DEDUCTED_FROM_DUES) {
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(start = 8.dp, end = 8.dp, bottom = 8.dp, top = 2.dp),
+                                shape = RoundedCornerShape(8.dp),
+                                colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF8E1))
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(10.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Info,
+                                        contentDescription = null,
+                                        tint = Color(0xFFF57F17),
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = "এই খরচ আপনার পাওনা টাকা থেকে বাদ হবে। হাতে থাকা টাকা কমবে না।",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = Color(0xFF5D4037),
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
 
@@ -302,7 +415,7 @@ fun AddEditExpenseDialog(
                             errorMessage = "দয়া করে খরচের সঠিক পরিমাণ লিখুন (০ এর বেশি হতে হবে)"
                             return@Button
                         }
-                        onSave(selectedDate, poisha, selectedCategory, noteText)
+                        onSave(selectedDate, poisha, selectedCategory, noteText, paymentSource)
                         onDismiss()
                     },
                     modifier = Modifier
@@ -321,3 +434,4 @@ fun AddEditExpenseDialog(
         }
     }
 }
+

@@ -193,6 +193,7 @@ fun MainAppNavigation(viewModel: LedgerViewModel) {
                         NavDestination.PAYMENTS -> PaymentListScreen(
                             payments = payments,
                             totalEarnedPoisha = overallSummary.totalEarnedPoisha,
+                            deductedFromDuesPoisha = overallSummary.deductedFromDuesPoisha,
                             useBengaliDigits = useBengaliDigits,
                             onAddPaymentClick = {
                                 paymentToEdit = null
@@ -305,13 +306,14 @@ fun MainAppNavigation(viewModel: LedgerViewModel) {
                             showExpenseDialog = false
                             expenseToEdit = null
                         },
-                        onSave = { date, amount, category, note ->
+                        onSave = { date, amount, category, note, paymentSource ->
                             viewModel.saveExpense(
                                 id = expenseToEdit?.id ?: 0L,
                                 date = date,
                                 amountInPoisha = amount,
                                 category = category,
-                                note = note
+                                note = note,
+                                paymentSource = paymentSource
                             )
                             showExpenseDialog = false
                             expenseToEdit = null

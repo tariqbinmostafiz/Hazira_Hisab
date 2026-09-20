@@ -1,5 +1,6 @@
 package com.example.ui.screens
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -299,17 +300,38 @@ fun ExpenseEntryCard(
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
                         )
-                        Surface(
-                            shape = RoundedCornerShape(6.dp),
-                            color = MaterialTheme.colorScheme.surfaceVariant,
-                            modifier = Modifier.padding(top = 2.dp)
+                        Row(
+                            modifier = Modifier.padding(top = 2.dp),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(
-                                text = expense.category,
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                            )
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant
+                            ) {
+                                Text(
+                                    text = expense.category,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
+
+                            if (expense.isDeductedFromDues) {
+                                Surface(
+                                    shape = RoundedCornerShape(6.dp),
+                                    color = Color(0xFFFFF3E0),
+                                    border = BorderStroke(1.dp, Color(0xFFFFB74D))
+                                ) {
+                                    Text(
+                                        text = "পাওনা টাকা থেকে কাটা হয়েছে",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = Color(0xFFE65100),
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -346,16 +368,26 @@ fun ExpenseEntryCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(10.dp))
-                    .background(Color(0xFFFFF3E0))
+                    .background(if (expense.isDeductedFromDues) Color(0xFFFFF8E1) else Color(0xFFFFF3E0))
                     .padding(12.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "খরচের পরিমাণ",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = Color(0xFFE65100)
-                )
+                Column {
+                    Text(
+                        text = "খরচের পরিমাণ",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = Color(0xFFE65100)
+                    )
+                    if (expense.isDeductedFromDues) {
+                        Text(
+                            text = "পাওনা টাকা থেকে কাটা",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color(0xFFBF360C),
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
                 Text(
                     text = CurrencyFormatter.formatTaka(expense.amountInPoisha, useBengaliDigits),
                     style = MaterialTheme.typography.titleLarge,

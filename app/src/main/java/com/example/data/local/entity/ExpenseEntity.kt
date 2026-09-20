@@ -11,6 +11,15 @@ data class ExpenseEntity(
     val amountInPoisha: Long,
     val category: String = "খাবার", // খাবার, অন্যান্য, যাতায়াত, চিকিৎসা
     val note: String = "",
+    val paymentSource: String = SOURCE_CASH, // CASH or DEDUCTED_FROM_DUES
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis()
-)
+) {
+    companion object {
+        const val SOURCE_CASH = "CASH"
+        const val SOURCE_DEDUCTED_FROM_DUES = "DEDUCTED_FROM_DUES"
+    }
+
+    val isDeductedFromDues: Boolean
+        get() = paymentSource == SOURCE_DEDUCTED_FROM_DUES
+}

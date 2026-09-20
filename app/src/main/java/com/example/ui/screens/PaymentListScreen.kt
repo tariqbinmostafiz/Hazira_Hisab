@@ -56,6 +56,7 @@ import com.example.ui.theme.MoneyReceivedColor
 fun PaymentListScreen(
     payments: List<PaymentEntity>,
     totalEarnedPoisha: Long,
+    deductedFromDuesPoisha: Long = 0L,
     useBengaliDigits: Boolean,
     onAddPaymentClick: () -> Unit,
     onEditPaymentClick: (PaymentEntity) -> Unit,
@@ -78,8 +79,8 @@ fun PaymentListScreen(
     }
 
     val totalReceivedPoisha = filteredList.sumOf { it.amountInPoisha }
-    val outstandingPoisha = totalEarnedPoisha - totalReceivedPoisha
-    val isAdvance = totalReceivedPoisha > totalEarnedPoisha
+    val outstandingPoisha = totalEarnedPoisha - totalReceivedPoisha - deductedFromDuesPoisha
+    val isAdvance = (totalReceivedPoisha + deductedFromDuesPoisha) > totalEarnedPoisha
 
     Box(modifier = modifier.fillMaxSize()) {
         LazyColumn(
