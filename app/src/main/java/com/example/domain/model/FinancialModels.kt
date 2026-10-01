@@ -48,6 +48,99 @@ data class DailySummary(
         get() = attendanceUnits > 0 || receivedPoisha > 0L || expensePoisha > 0L
 }
 
+data class MonthlyAccountingSummary(
+    val yearMonth: java.time.YearMonth,
+    // Opening balances (all records prior to this month)
+    val previousEarnedPoisha: Long = 0L,
+    val previousReceivedPoisha: Long = 0L,
+    val previousExpensePoisha: Long = 0L,
+    val previousDeductedFromDuesPoisha: Long = 0L,
+
+    // Activity in this month
+    val monthAttendanceUnits: Int = 0,
+    val monthEarnedPoisha: Long = 0L,
+    val monthReceivedPoisha: Long = 0L,
+    val monthExpensePoisha: Long = 0L,
+    val monthFoodExpensePoisha: Long = 0L,
+    val monthOtherExpensePoisha: Long = 0L,
+    val monthDeductedFromDuesPoisha: Long = 0L
+) {
+    // 1. Opening Dues Balance (পূর্বের বকেয়া)
+    val previousDuesPoisha: Long
+        get() = previousEarnedPoisha - previousReceivedPoisha - previousDeductedFromDuesPoisha
+
+    val isPreviousAdvance: Boolean
+        get() = previousDuesPoisha < 0L
+
+    val previousAdvancePoisha: Long
+        get() = if (isPreviousAdvance) -previousDuesPoisha else 0L
+
+    val previousUnpaidDuesPoisha: Long
+        get() = if (!isPreviousAdvance) previousDuesPoisha else 0L
+
+    // 2. This Month's Net Due Change (এই মাসের বকেয়া পরিবর্তন)
+    // Earned - Received - DeductedFromDues in this month
+    val monthNetDueChangePoisha: Long
+        get() = monthEarnedPoisha - monthReceivedPoisha - monthDeductedFromDuesPoisha
+
+    // 3. Total Outstanding / Closing Due (সর্বমোট বর্তমান বকেয়া)
+    // previousDuesPoisha + monthNetDueChangePoisha
+    val totalOutstandingPoisha: Long
+        get() = previousDuesPoisha + monthNetDueChangePoisha
+
+    val isTotalAdvance: Boolean
+        get() = totalOutstandingPoisha < 0L
+
+    val totalAdvancePoisha: Long
+        get() = if (isTotalAdvance) -totalOutstandingPoisha else 0L
+
+    val totalUnpaidDuesPoisha: Long
+        get() = if (!isTotalAdvance) totalOutstandingPoisha else 0L
+
+    // 4. Cash Balances (হাতে থাকা নগদ টাকা)
+    // Previous cash expenses = previous expenses - previous deducted from dues
+    val previousCashExpensesPoisha: Long
+        get() = previousExpensePoisha - previousDeductedFromDuesPoisha
+
+    // Previous cash in hand (পূর্বের নগদ জমা)
+    val previousCashInHandPoisha: Long
+        get() = previousReceivedPoisha - previousCashExpensesPoisha
+
+    // This month cash expenses (excluding deducted from dues)
+    val monthCashExpensesPoisha: Long
+        get() = monthExpensePoisha - monthDeductedFromDuesPoisha
+
+    // This month net cash change
+    val monthNetCashChangePoisha: Long
+        get() = monthReceivedPoisha - monthCashExpensesPoisha
+
+    // Closing total cash in hand (বর্তমান হাতে নগদ)
+    // Previous Cash Balance + This Month Received - This Month Cash Expenses
+    val totalCashInHandPoisha: Long
+        get() = previousCashInHandPoisha + monthNetCashChangePoisha
+
+    val hasMonthActivity: Boolean
+        get() = monthAttendanceUnits > 0 || monthReceivedPoisha > 0L || monthExpensePoisha > 0L
+
+    val hasPreviousData: Boolean
+        get() = previousEarnedPoisha > 0L || previousReceivedPoisha > 0L || previousExpensePoisha > 0L
+
+    val hasAnyData: Boolean
+        get() = hasMonthActivity || hasPreviousData
+
+    fun toFinancialSummary(): FinancialSummary {
+        return FinancialSummary(
+            totalAttendanceUnits = monthAttendanceUnits,
+            totalEarnedPoisha = monthEarnedPoisha,
+            totalReceivedPoisha = monthReceivedPoisha,
+            totalExpensePoisha = monthExpensePoisha,
+            foodExpensePoisha = monthFoodExpensePoisha,
+            otherExpensePoisha = monthOtherExpensePoisha,
+            deductedFromDuesPoisha = monthDeductedFromDuesPoisha
+        )
+    }
+}
+
 enum class TransactionType {
     WORK,
     PAYMENT,

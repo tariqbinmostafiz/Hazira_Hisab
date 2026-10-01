@@ -13,6 +13,7 @@ import com.example.domain.ai.GeminiFinancialAdvisor
 import com.example.domain.model.CurrencyFormatter
 import com.example.domain.model.DailySummary
 import com.example.domain.model.FinancialSummary
+import com.example.domain.model.MonthlyAccountingSummary
 import com.example.domain.model.RecentActivityItem
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -25,6 +26,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 
 enum class ReportPeriod(val label: String) {
@@ -77,6 +79,62 @@ class LedgerViewModel(application: Application) : AndroidViewModel(application) 
 
     val useBengaliDigits: StateFlow<Boolean> = dataStore.useBengaliDigits
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+
+    // Monthly Accounting Period State (defaults automatically to current month)
+    private val _selectedMonth = MutableStateFlow(YearMonth.now())
+    val selectedMonth: StateFlow<YearMonth> = _selectedMonth.asStateFlow()
+
+    // Available months list extracted dynamically from records + current month (sorted descending)
+    val availableMonths: StateFlow<List<YearMonth>> = combine(
+        workEntries,
+        payments,
+        expenses,
+        _selectedMonth
+    ) { works, pays, exps, selected ->
+        val set = mutableSetOf<YearMonth>()
+        set.add(YearMonth.now())
+        set.add(selected)
+        works.forEach { w -> CurrencyFormatter.parseYearMonth(w.date)?.let { set.add(it) } }
+        pays.forEach { p -> CurrencyFormatter.parseYearMonth(p.date)?.let { set.add(it) } }
+        exps.forEach { e -> CurrencyFormatter.parseYearMonth(e.date)?.let { set.add(it) } }
+        set.sortedDescending()
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), listOf(YearMonth.now()))
+
+    // Monthly Accounting Summary: carries forward opening balances and calculates this month's financials
+    val monthlySummary: StateFlow<MonthlyAccountingSummary> = combine(
+        _selectedMonth,
+        workEntries,
+        payments,
+        expenses
+    ) { month, works, pays, exps ->
+        calculateMonthlySummary(month, works, pays, exps)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), MonthlyAccountingSummary(YearMonth.now()))
+
+    // Recent activities filtered for the selected month (or all recent activities if none in month)
+    val monthActivities: StateFlow<List<RecentActivityItem>> = combine(
+        _selectedMonth,
+        recentActivities
+    ) { month, activities ->
+        val prefix = month.format(DateTimeFormatter.ofPattern("yyyy-MM"))
+        val monthFiltered = activities.filter { it.date.startsWith(prefix) }
+        monthFiltered
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    fun selectMonth(yearMonth: YearMonth) {
+        _selectedMonth.value = yearMonth
+    }
+
+    fun goToPreviousMonth() {
+        _selectedMonth.value = _selectedMonth.value.minusMonths(1)
+    }
+
+    fun goToNextMonth() {
+        _selectedMonth.value = _selectedMonth.value.plusMonths(1)
+    }
+
+    fun resetToCurrentMonth() {
+        _selectedMonth.value = YearMonth.now()
+    }
 
     // Report Period
     private val _selectedPeriod = MutableStateFlow(ReportPeriod.THIS_MONTH)
@@ -333,6 +391,80 @@ class LedgerViewModel(application: Application) : AndroidViewModel(application) 
             foodExpensePoisha = food,
             otherExpensePoisha = other,
             deductedFromDuesPoisha = duesDeduction
+        )
+    }
+
+    private fun calculateMonthlySummary(
+        month: YearMonth,
+        works: List<WorkEntryEntity>,
+        pays: List<PaymentEntity>,
+        exps: List<ExpenseEntity>
+    ): MonthlyAccountingSummary {
+        val startOfMonth = month.atDay(1).format(DateTimeFormatter.ISO_LOCAL_DATE)
+        val endOfMonth = month.atEndOfMonth().format(DateTimeFormatter.ISO_LOCAL_DATE)
+
+        var prevEarned = 0L
+        var prevReceived = 0L
+        var prevExpense = 0L
+        var prevDuesDeduction = 0L
+
+        var monthAtt = 0
+        var monthEarned = 0L
+        var monthReceived = 0L
+        var monthExpense = 0L
+        var monthFood = 0L
+        var monthOther = 0L
+        var monthDuesDeduction = 0L
+
+        for (w in works) {
+            if (w.date < startOfMonth) {
+                prevEarned += w.earnedInPoisha
+            } else if (w.date <= endOfMonth) {
+                monthAtt += w.attendanceUnits
+                monthEarned += w.earnedInPoisha
+            }
+        }
+
+        for (p in pays) {
+            if (p.date < startOfMonth) {
+                prevReceived += p.amountInPoisha
+            } else if (p.date <= endOfMonth) {
+                monthReceived += p.amountInPoisha
+            }
+        }
+
+        for (e in exps) {
+            if (e.date < startOfMonth) {
+                prevExpense += e.amountInPoisha
+                if (e.isDeductedFromDues) {
+                    prevDuesDeduction += e.amountInPoisha
+                }
+            } else if (e.date <= endOfMonth) {
+                monthExpense += e.amountInPoisha
+                if (e.category == "খাবার") {
+                    monthFood += e.amountInPoisha
+                } else {
+                    monthOther += e.amountInPoisha
+                }
+                if (e.isDeductedFromDues) {
+                    monthDuesDeduction += e.amountInPoisha
+                }
+            }
+        }
+
+        return MonthlyAccountingSummary(
+            yearMonth = month,
+            previousEarnedPoisha = prevEarned,
+            previousReceivedPoisha = prevReceived,
+            previousExpensePoisha = prevExpense,
+            previousDeductedFromDuesPoisha = prevDuesDeduction,
+            monthAttendanceUnits = monthAtt,
+            monthEarnedPoisha = monthEarned,
+            monthReceivedPoisha = monthReceived,
+            monthExpensePoisha = monthExpense,
+            monthFoodExpensePoisha = monthFood,
+            monthOtherExpensePoisha = monthOther,
+            monthDeductedFromDuesPoisha = monthDuesDeduction
         )
     }
 }

@@ -85,6 +85,10 @@ fun MainAppNavigation(viewModel: LedgerViewModel) {
         val useBengaliDigits by viewModel.useBengaliDigits.collectAsState()
         val selectedPeriod by viewModel.selectedPeriod.collectAsState()
         val periodSummary by viewModel.periodSummary.collectAsState()
+        val selectedMonth by viewModel.selectedMonth.collectAsState()
+        val availableMonths by viewModel.availableMonths.collectAsState()
+        val monthlySummary by viewModel.monthlySummary.collectAsState()
+        val monthActivities by viewModel.monthActivities.collectAsState()
         val aiAnalysis by viewModel.aiAnalysis.collectAsState()
         val isAiLoading by viewModel.isAiLoading.collectAsState()
 
@@ -153,9 +157,15 @@ fun MainAppNavigation(viewModel: LedgerViewModel) {
                 ) { dest ->
                     when (dest) {
                         NavDestination.HOME -> DashboardScreen(
-                            overallSummary = overallSummary,
+                            monthlySummary = monthlySummary,
+                            selectedMonth = selectedMonth,
+                            availableMonths = availableMonths,
+                            onSelectMonth = { viewModel.selectMonth(it) },
+                            onPreviousMonth = { viewModel.goToPreviousMonth() },
+                            onNextMonth = { viewModel.goToNextMonth() },
+                            onResetToCurrentMonth = { viewModel.resetToCurrentMonth() },
                             todaySummary = todaySummary,
-                            recentActivities = recentActivities,
+                            recentActivities = if (monthActivities.isNotEmpty()) monthActivities else recentActivities,
                             useBengaliDigits = useBengaliDigits,
                             onAddWorkClick = {
                                 workToEdit = null
@@ -231,7 +241,9 @@ fun MainAppNavigation(viewModel: LedgerViewModel) {
                             aiAnalysis = aiAnalysis,
                             isAiLoading = isAiLoading,
                             onPeriodSelected = { viewModel.selectPeriod(it) },
-                            onRunAiAnalysis = { viewModel.runAiAnalysis() }
+                            onRunAiAnalysis = { viewModel.runAiAnalysis() },
+                            monthlySummary = monthlySummary,
+                            selectedMonth = selectedMonth
                         )
 
                         NavDestination.SETTINGS -> SettingsScreen(

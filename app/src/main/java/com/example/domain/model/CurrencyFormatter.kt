@@ -188,4 +188,32 @@ object CurrencyFormatter {
     fun todayIso(): String {
         return LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE)
     }
+
+    /**
+     * Format YearMonth to friendly Bengali string:
+     * e.g. "অক্টোবর ২০২৬" or "সেপ্টেম্বর ২০২৬"
+     */
+    fun formatYearMonthBengali(yearMonth: java.time.YearMonth, useBengaliDigits: Boolean = true): String {
+        val monthNames = arrayOf(
+            "জানুয়ারি", "ফেব্রুয়ারি", "মার্চ", "এপ্রিল", "মে", "জুন",
+            "জুলাই", "আগস্ট", "সেপ্টেম্বর", "অক্টোবর", "নভেম্বর", "ডিসেম্বর"
+        )
+        val monthName = monthNames[yearMonth.monthValue - 1]
+        val year = yearMonth.year.toString()
+        val yearStr = if (useBengaliDigits) convertToBengaliDigits(year) else year
+        return "$monthName $yearStr"
+    }
+
+    /**
+     * Safely parse YYYY-MM-DD or YYYY-MM string to YearMonth
+     */
+    fun parseYearMonth(dateStr: String): java.time.YearMonth? {
+        return try {
+            if (dateStr.length >= 7) {
+                java.time.YearMonth.parse(dateStr.take(7))
+            } else null
+        } catch (_: Exception) {
+            null
+        }
+    }
 }

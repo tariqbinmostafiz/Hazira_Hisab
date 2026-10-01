@@ -50,6 +50,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.domain.model.CurrencyFormatter
 import com.example.domain.model.FinancialSummary
+import com.example.domain.model.MonthlyAccountingSummary
 import com.example.ui.theme.MoneyAdvanceColor
 import com.example.ui.theme.MoneyDueColor
 import com.example.ui.theme.MoneyEarnedColor
@@ -57,6 +58,7 @@ import com.example.ui.theme.MoneyExpenseColor
 import com.example.ui.theme.MoneyInHandColor
 import com.example.ui.theme.MoneyReceivedColor
 import com.example.ui.viewmodel.ReportPeriod
+import java.time.YearMonth
 
 @Composable
 fun ReportsScreen(
@@ -67,6 +69,8 @@ fun ReportsScreen(
     isAiLoading: Boolean,
     onPeriodSelected: (ReportPeriod) -> Unit,
     onRunAiAnalysis: () -> Unit,
+    monthlySummary: MonthlyAccountingSummary? = null,
+    selectedMonth: YearMonth? = null,
     modifier: Modifier = Modifier
 ) {
     LazyColumn(
@@ -112,11 +116,19 @@ fun ReportsScreen(
 
         // Cash Position Highlight
         item {
+            val isMonthly = selectedPeriod == ReportPeriod.THIS_MONTH && monthlySummary != null
+            val cashInHand = if (isMonthly) monthlySummary!!.totalCashInHandPoisha else periodSummary.cashInHandPoisha
+            val cashSubtitle = if (isMonthly && monthlySummary!!.previousCashInHandPoisha != 0L) {
+                "পূর্বের নগদ (${CurrencyFormatter.formatTaka(monthlySummary.previousCashInHandPoisha, useBengaliDigits)}) + এই মাসে প্রাপ্তি - নগদ খরচ বাদে"
+            } else {
+                "মোট পাওয়া টাকা থেকে খরচ বাদে"
+            }
+
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(20.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = if (periodSummary.cashInHandPoisha >= 0)
+                    containerColor = if (cashInHand >= 0)
                         Color(0xFFE8F5E9)
                     else
                         Color(0xFFFFEBEE)
@@ -128,24 +140,24 @@ fun ReportsScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column {
+                        Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = "এই সময়ের নগদ স্থিতি (হাতে অবশিষ্ট)",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
-                                color = if (periodSummary.cashInHandPoisha >= 0) Color(0xFF1B5E20) else Color(0xFFB71C1C)
+                                color = if (cashInHand >= 0) Color(0xFF1B5E20) else Color(0xFFB71C1C)
                             )
                             Text(
-                                text = "মোট পাওয়া টাকা থেকে খরচ বাদে",
+                                text = cashSubtitle,
                                 style = MaterialTheme.typography.bodySmall,
                                 color = Color.Black.copy(alpha = 0.6f)
                             )
                         }
                         Text(
-                            text = CurrencyFormatter.formatTaka(periodSummary.cashInHandPoisha, useBengaliDigits),
+                            text = CurrencyFormatter.formatTaka(cashInHand, useBengaliDigits),
                             style = MaterialTheme.typography.headlineSmall,
                             fontWeight = FontWeight.Bold,
-                            color = if (periodSummary.cashInHandPoisha >= 0) MoneyInHandColor else MoneyExpenseColor
+                            color = if (cashInHand >= 0) MoneyInHandColor else MoneyExpenseColor
                         )
                     }
                 }
@@ -154,6 +166,7 @@ fun ReportsScreen(
 
         // Detailed Financial Ledger Card
         item {
+            val isMonthly = selectedPeriod == ReportPeriod.THIS_MONTH && monthlySummary != null
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(18.dp),
@@ -162,7 +175,10 @@ fun ReportsScreen(
             ) {
                 Column(modifier = Modifier.padding(20.dp)) {
                     Text(
-                        text = "আর্থিক বিবরণী (${selectedPeriod.label})",
+                        text = if (isMonthly && selectedMonth != null)
+                            "আর্থিক বিবরণী (${CurrencyFormatter.formatYearMonthBengali(selectedMonth, useBengaliDigits)})"
+                        else
+                            "আর্থিক বিবরণী (${selectedPeriod.label})",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
@@ -170,62 +186,168 @@ fun ReportsScreen(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Row 1: Work Attendance
-                    ReportDetailRow(
-                        title = "মোট কাজের পরিমাণ",
-                        value = CurrencyFormatter.formatAttendance(periodSummary.totalAttendanceUnits, useBengaliDigits),
-                        valueColor = MaterialTheme.colorScheme.onSurface
-                    )
+                    if (isMonthly) {
+                        val mSummary = monthlySummary!!
 
-                    // Row 2: Total Earned
-                    ReportDetailRow(
-                        title = "মোট প্রাপ্য আয়",
-                        value = CurrencyFormatter.formatTaka(periodSummary.totalEarnedPoisha, useBengaliDigits),
-                        valueColor = MoneyEarnedColor
-                    )
+                        // Row 1: Work Attendance
+                        ReportDetailRow(
+                            title = "মোট কাজের পরিমাণ",
+                            value = CurrencyFormatter.formatAttendance(mSummary.monthAttendanceUnits, useBengaliDigits),
+                            valueColor = MaterialTheme.colorScheme.onSurface
+                        )
 
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 10.dp))
+                        // Row 2: Total Earned
+                        ReportDetailRow(
+                            title = "এই মাসের প্রাপ্য আয়",
+                            value = CurrencyFormatter.formatTaka(mSummary.monthEarnedPoisha, useBengaliDigits),
+                            valueColor = MoneyEarnedColor,
+                            isBold = true
+                        )
 
-                    // Row 3: Total Received
-                    ReportDetailRow(
-                        title = "মোট পাওয়া নগদ টাকা",
-                        value = CurrencyFormatter.formatTaka(periodSummary.totalReceivedPoisha, useBengaliDigits),
-                        valueColor = MoneyReceivedColor
-                    )
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 10.dp))
 
-                    // Row 4: Outstanding Dues or Advance
-                    val dueTitle = if (periodSummary.isAdvance) "অগ্রিম নেওয়া টাকা" else "বকেয়া বাকি টাকা"
-                    val dueAmount = if (periodSummary.isAdvance) periodSummary.advancePoisha else periodSummary.unpaidDuesPoisha
-                    val dueColor = if (periodSummary.isAdvance) MoneyAdvanceColor else MoneyDueColor
-                    ReportDetailRow(
-                        title = dueTitle,
-                        value = CurrencyFormatter.formatTaka(dueAmount, useBengaliDigits),
-                        valueColor = dueColor
-                    )
+                        // Row 3: Total Received
+                        ReportDetailRow(
+                            title = "মোট পাওয়া নগদ টাকা",
+                            value = CurrencyFormatter.formatTaka(mSummary.monthReceivedPoisha, useBengaliDigits),
+                            valueColor = MoneyReceivedColor
+                        )
 
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 10.dp))
+                        // If dues deduction exists
+                        if (mSummary.monthDeductedFromDuesPoisha > 0L) {
+                            ReportDetailRow(
+                                title = "পাওনা টাকা থেকে কাটা খরচ",
+                                value = CurrencyFormatter.formatTaka(mSummary.monthDeductedFromDuesPoisha, useBengaliDigits),
+                                valueColor = MaterialTheme.colorScheme.primary
+                            )
+                        }
 
-                    // Row 5: Food Expense
-                    ReportDetailRow(
-                        title = "খাবার বাবদ খরচ",
-                        value = CurrencyFormatter.formatTaka(periodSummary.foodExpensePoisha, useBengaliDigits),
-                        valueColor = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                        // Row 4: Net due change this month
+                        ReportDetailRow(
+                            title = "এই মাসের বকেয়া পরিবর্তন",
+                            value = CurrencyFormatter.formatTaka(mSummary.monthNetDueChangePoisha, useBengaliDigits),
+                            valueColor = if (mSummary.monthNetDueChangePoisha >= 0) MoneyDueColor else MoneyAdvanceColor
+                        )
 
-                    // Row 6: Other Expense
-                    ReportDetailRow(
-                        title = "অন্যান্য খরচ",
-                        value = CurrencyFormatter.formatTaka(periodSummary.otherExpensePoisha, useBengaliDigits),
-                        valueColor = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                        // Previous dues carry forward
+                        if (mSummary.previousDuesPoisha != 0L) {
+                            ReportDetailRow(
+                                title = "পূর্বের বকেয়া (আগের মাসের জের)",
+                                value = CurrencyFormatter.formatTaka(mSummary.previousDuesPoisha, useBengaliDigits),
+                                valueColor = if (mSummary.isPreviousAdvance) MoneyAdvanceColor else MoneyDueColor
+                            )
+                        }
 
-                    // Row 7: Total Expense
-                    ReportDetailRow(
-                        title = "মোট ব্যক্তিগত খরচ",
-                        value = CurrencyFormatter.formatTaka(periodSummary.totalExpensePoisha, useBengaliDigits),
-                        valueColor = MoneyExpenseColor,
-                        isBold = true
-                    )
+                        // Row 5: Total Outstanding Closing
+                        val totalDueTitle = if (mSummary.isTotalAdvance) "সর্বমোট অগ্রিম নেওয়া টাকা" else "সর্বমোট বর্তমান বাকি পাওনা"
+                        val totalDueAmount = if (mSummary.isTotalAdvance) mSummary.totalAdvancePoisha else mSummary.totalUnpaidDuesPoisha
+                        val totalDueColor = if (mSummary.isTotalAdvance) MoneyAdvanceColor else MoneyDueColor
+                        ReportDetailRow(
+                            title = totalDueTitle,
+                            value = CurrencyFormatter.formatTaka(totalDueAmount, useBengaliDigits),
+                            valueColor = totalDueColor,
+                            isBold = true
+                        )
+
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 10.dp))
+
+                        // Row 6: Food Expense
+                        ReportDetailRow(
+                            title = "খাবার বাবদ খরচ",
+                            value = CurrencyFormatter.formatTaka(mSummary.monthFoodExpensePoisha, useBengaliDigits),
+                            valueColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+
+                        // Row 7: Other Expense
+                        ReportDetailRow(
+                            title = "অন্যান্য খরচ",
+                            value = CurrencyFormatter.formatTaka(mSummary.monthOtherExpensePoisha, useBengaliDigits),
+                            valueColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+
+                        // Row 8: Total Expense
+                        ReportDetailRow(
+                            title = "মোট ব্যক্তিগত খরচ",
+                            value = CurrencyFormatter.formatTaka(mSummary.monthExpensePoisha, useBengaliDigits),
+                            valueColor = MoneyExpenseColor,
+                            isBold = true
+                        )
+
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 10.dp))
+
+                        if (mSummary.previousCashInHandPoisha != 0L) {
+                            ReportDetailRow(
+                                title = "পূর্বের নগদ স্থিতি",
+                                value = CurrencyFormatter.formatTaka(mSummary.previousCashInHandPoisha, useBengaliDigits),
+                                valueColor = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+
+                        ReportDetailRow(
+                            title = "হাতে থাকা মোট নগদ টাকা",
+                            value = CurrencyFormatter.formatTaka(mSummary.totalCashInHandPoisha, useBengaliDigits),
+                            valueColor = if (mSummary.totalCashInHandPoisha >= 0) MoneyInHandColor else MoneyExpenseColor,
+                            isBold = true
+                        )
+                    } else {
+                        // Standard Period View
+                        // Row 1: Work Attendance
+                        ReportDetailRow(
+                            title = "মোট কাজের পরিমাণ",
+                            value = CurrencyFormatter.formatAttendance(periodSummary.totalAttendanceUnits, useBengaliDigits),
+                            valueColor = MaterialTheme.colorScheme.onSurface
+                        )
+
+                        // Row 2: Total Earned
+                        ReportDetailRow(
+                            title = "মোট প্রাপ্য আয়",
+                            value = CurrencyFormatter.formatTaka(periodSummary.totalEarnedPoisha, useBengaliDigits),
+                            valueColor = MoneyEarnedColor
+                        )
+
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 10.dp))
+
+                        // Row 3: Total Received
+                        ReportDetailRow(
+                            title = "মোট পাওয়া নগদ টাকা",
+                            value = CurrencyFormatter.formatTaka(periodSummary.totalReceivedPoisha, useBengaliDigits),
+                            valueColor = MoneyReceivedColor
+                        )
+
+                        // Row 4: Outstanding Dues or Advance
+                        val dueTitle = if (periodSummary.isAdvance) "অগ্রিম নেওয়া টাকা" else "বকেয়া বাকি টাকা"
+                        val dueAmount = if (periodSummary.isAdvance) periodSummary.advancePoisha else periodSummary.unpaidDuesPoisha
+                        val dueColor = if (periodSummary.isAdvance) MoneyAdvanceColor else MoneyDueColor
+                        ReportDetailRow(
+                            title = dueTitle,
+                            value = CurrencyFormatter.formatTaka(dueAmount, useBengaliDigits),
+                            valueColor = dueColor
+                        )
+
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 10.dp))
+
+                        // Row 5: Food Expense
+                        ReportDetailRow(
+                            title = "খাবার বাবদ খরচ",
+                            value = CurrencyFormatter.formatTaka(periodSummary.foodExpensePoisha, useBengaliDigits),
+                            valueColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+
+                        // Row 6: Other Expense
+                        ReportDetailRow(
+                            title = "অন্যান্য খরচ",
+                            value = CurrencyFormatter.formatTaka(periodSummary.otherExpensePoisha, useBengaliDigits),
+                            valueColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+
+                        // Row 7: Total Expense
+                        ReportDetailRow(
+                            title = "মোট ব্যক্তিগত খরচ",
+                            value = CurrencyFormatter.formatTaka(periodSummary.totalExpensePoisha, useBengaliDigits),
+                            valueColor = MoneyExpenseColor,
+                            isBold = true
+                        )
+                    }
                 }
             }
         }
