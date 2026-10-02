@@ -170,7 +170,16 @@ object CurrencyFormatter {
         }
     }
 
-    private fun formatFullBengaliDate(date: LocalDate, useBengaliDigits: Boolean): String {
+    fun formatFullBengaliDate(isoDate: String, useBengaliDigits: Boolean = true): String {
+        return try {
+            val date = LocalDate.parse(isoDate)
+            formatFullBengaliDate(date, useBengaliDigits)
+        } catch (_: Exception) {
+            isoDate
+        }
+    }
+
+    fun formatFullBengaliDate(date: LocalDate, useBengaliDigits: Boolean = true): String {
         val day = date.dayOfMonth.toString()
         val year = date.year.toString()
         val monthNames = arrayOf(

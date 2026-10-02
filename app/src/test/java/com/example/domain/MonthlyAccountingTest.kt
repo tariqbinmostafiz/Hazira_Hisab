@@ -94,4 +94,35 @@ class MonthlyAccountingTest {
         val sep2026 = CurrencyFormatter.formatYearMonthBengali(YearMonth.of(2026, 9), useBengaliDigits = true)
         assertEquals("সেপ্টেম্বর ২০২৬", sep2026)
     }
+
+    @Test
+    fun testUserSection21Scenario() {
+        val octSummary = MonthlyAccountingSummary(
+            yearMonth = YearMonth.of(2026, 10),
+            previousEarnedPoisha = 10_000_00L,
+            previousReceivedPoisha = 6_000_00L,
+            previousExpensePoisha = 1_200_00L,
+            previousDeductedFromDuesPoisha = 200_00L,
+            monthAttendanceUnits = 5000,
+            monthEarnedPoisha = 5_000_00L,
+            monthReceivedPoisha = 2_000_00L,
+            monthExpensePoisha = 600_00L,
+            monthFoodExpensePoisha = 350_00L,
+            monthOtherExpensePoisha = 250_00L,
+            monthDeductedFromDuesPoisha = 100_00L
+        )
+
+        // HOME numbers
+        assertEquals(5000, octSummary.monthAttendanceUnits)
+        assertEquals(5_000_00L, octSummary.monthEarnedPoisha)
+        assertEquals(2_000_00L, octSummary.monthReceivedPoisha)
+        assertEquals(600_00L, octSummary.monthExpensePoisha)
+
+        // REPORTS numbers
+        assertEquals(3_800_00L, octSummary.previousDuesPoisha)
+        assertEquals(5_000_00L, octSummary.previousCashInHandPoisha)
+        assertEquals(500_00L, octSummary.monthCashExpensesPoisha)
+        assertEquals(6_700_00L, octSummary.totalUnpaidDuesPoisha)
+        assertEquals(6_500_00L, octSummary.totalCashInHandPoisha)
+    }
 }

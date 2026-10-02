@@ -24,6 +24,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ReceiptLong
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDownward
@@ -31,9 +33,7 @@ import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.AttachMoney
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.EventAvailable
-import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.material.icons.filled.ShoppingCart
-import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material.icons.filled.Work
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -63,7 +63,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.domain.model.CurrencyFormatter
 import com.example.domain.model.DailySummary
-import com.example.domain.model.FinancialSummary
+import com.example.domain.model.MonthlyAccountingSummary
 import com.example.domain.model.RecentActivityItem
 import com.example.domain.model.TransactionType
 import com.example.ui.theme.MoneyAdvanceColor
@@ -75,7 +75,7 @@ import com.example.ui.theme.MoneyReceivedColor
 
 @Composable
 fun DashboardScreen(
-    overallSummary: FinancialSummary,
+    currentMonthSummary: MonthlyAccountingSummary,
     todaySummary: DailySummary,
     recentActivities: List<RecentActivityItem>,
     useBengaliDigits: Boolean,
@@ -97,7 +97,7 @@ fun DashboardScreen(
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 96.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Header: "হাজিরা হিসাব" & "আজ (তারিখ)"
+            // Header: "হাজিরা হিসাব" & "আজ (২ অক্টোবর ২০২৬)" - Clean & Not Duplicated
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -112,7 +112,7 @@ fun DashboardScreen(
                             color = MaterialTheme.colorScheme.onBackground
                         )
                         Text(
-                            text = "আজ (${CurrencyFormatter.formatDateBengali(CurrencyFormatter.todayIso(), useBengaliDigits)})",
+                            text = CurrencyFormatter.formatDateBengali(CurrencyFormatter.todayIso(), useBengaliDigits),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -120,7 +120,7 @@ fun DashboardScreen(
                 }
             }
 
-            // Clean "আজকের দিনের হিসাব" Card
+            // Clean "আজকের দিনের হিসাব" Card (Today's activity only)
             item {
                 Card(
                     modifier = Modifier
@@ -227,13 +227,14 @@ fun DashboardScreen(
 
             // Cash in Hand Hero Card ("হাতে থাকা নগদ টাকা")
             item {
+                val cashInHand = currentMonthSummary.totalCashInHandPoisha
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
                         .testTag("cash_in_hand_card"),
                     shape = RoundedCornerShape(20.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = if (overallSummary.cashInHandPoisha >= 0)
+                        containerColor = if (cashInHand >= 0)
                             Color(0xFFE8F5E9)
                         else
                             Color(0xFFFFEBEE)
@@ -254,7 +255,7 @@ fun DashboardScreen(
                                         .size(36.dp)
                                         .clip(CircleShape)
                                         .background(
-                                            if (overallSummary.cashInHandPoisha >= 0) MoneyInHandColor else MoneyExpenseColor
+                                            if (cashInHand >= 0) MoneyInHandColor else MoneyExpenseColor
                                         ),
                                     contentAlignment = Alignment.Center
                                 ) {
@@ -271,10 +272,10 @@ fun DashboardScreen(
                                         text = "হাতে থাকা নগদ টাকা",
                                         style = MaterialTheme.typography.titleMedium,
                                         fontWeight = FontWeight.Bold,
-                                        color = if (overallSummary.cashInHandPoisha >= 0) Color(0xFF1B5E20) else Color(0xFFB71C1C)
+                                        color = if (cashInHand >= 0) Color(0xFF1B5E20) else Color(0xFFB71C1C)
                                     )
                                     Text(
-                                        text = "মোট পাওয়া টাকা থেকে খরচ বাদে",
+                                        text = "বর্তমান নগদ স্থিতি",
                                         style = MaterialTheme.typography.bodySmall,
                                         color = Color.Black.copy(alpha = 0.6f)
                                     )
@@ -283,18 +284,18 @@ fun DashboardScreen(
                         }
 
                         Text(
-                            text = CurrencyFormatter.formatTaka(overallSummary.cashInHandPoisha, useBengaliDigits),
+                            text = CurrencyFormatter.formatTaka(cashInHand, useBengaliDigits),
                             style = MaterialTheme.typography.headlineSmall.copy(
                                 fontWeight = FontWeight.Bold,
                                 letterSpacing = (-0.5).sp
                             ),
-                            color = if (overallSummary.cashInHandPoisha >= 0) MoneyInHandColor else MoneyExpenseColor
+                            color = if (cashInHand >= 0) MoneyInHandColor else MoneyExpenseColor
                         )
                     }
                 }
             }
 
-            // Main Financial Cards (Row 1: মোট প্রাপ্য আয় & মোট পাওয়া টাকা)
+            // Current Month Financial Cards (Row 1: মোট প্রাপ্য আয় & মোট পাওয়া টাকা)
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -302,9 +303,9 @@ fun DashboardScreen(
                 ) {
                     MetricCard(
                         title = "মোট প্রাপ্য আয়",
-                        value = CurrencyFormatter.formatTaka(overallSummary.totalEarnedPoisha, useBengaliDigits),
-                        subtitle = "মোট ${CurrencyFormatter.formatAttendance(overallSummary.totalAttendanceUnits, useBengaliDigits)}",
-                        icon = Icons.Default.TrendingUp,
+                        value = CurrencyFormatter.formatTaka(currentMonthSummary.monthEarnedPoisha, useBengaliDigits),
+                        subtitle = "এই মাসে মোট ${CurrencyFormatter.formatAttendance(currentMonthSummary.monthAttendanceUnits, useBengaliDigits)}",
+                        icon = Icons.AutoMirrored.Filled.TrendingUp,
                         iconColor = MoneyEarnedColor,
                         modifier = Modifier.weight(1f),
                         testTag = "metric_earned",
@@ -312,8 +313,8 @@ fun DashboardScreen(
                     )
                     MetricCard(
                         title = "মোট পাওয়া টাকা",
-                        value = CurrencyFormatter.formatTaka(overallSummary.totalReceivedPoisha, useBengaliDigits),
-                        subtitle = "নগদ আদায়",
+                        value = CurrencyFormatter.formatTaka(currentMonthSummary.monthReceivedPoisha, useBengaliDigits),
+                        subtitle = "এই মাসে নগদ আদায়",
                         icon = Icons.Default.AttachMoney,
                         iconColor = MoneyReceivedColor,
                         modifier = Modifier.weight(1f),
@@ -323,25 +324,25 @@ fun DashboardScreen(
                 }
             }
 
-            // Main Financial Cards (Row 2: মোট বাকি পাওনা & মোট খরচ)
+            // Current Month Financial Cards (Row 2: মোট বাকি পাওনা & মোট খরচ)
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    val dueTitle = if (overallSummary.isAdvance) "অগ্রিম নেওয়া টাকা" else "মোট বাকি পাওনা"
-                    val dueVal = if (overallSummary.isAdvance)
-                        CurrencyFormatter.formatTaka(overallSummary.advancePoisha, useBengaliDigits)
+                    val dueTitle = if (currentMonthSummary.isTotalAdvance) "মোট অগ্রিম নেওয়া" else "মোট বাকি পাওনা"
+                    val dueVal = if (currentMonthSummary.isTotalAdvance)
+                        CurrencyFormatter.formatTaka(currentMonthSummary.totalAdvancePoisha, useBengaliDigits)
                     else
-                        CurrencyFormatter.formatTaka(overallSummary.unpaidDuesPoisha, useBengaliDigits)
-                    val dueColor = if (overallSummary.isAdvance) MoneyAdvanceColor else MoneyDueColor
-                    val dueSubtitle = if (overallSummary.isAdvance) "মালিকের অতিরিক্ত দেওয়া" else "মালিকের নিকট পাওনা"
+                        CurrencyFormatter.formatTaka(currentMonthSummary.totalUnpaidDuesPoisha, useBengaliDigits)
+                    val dueColor = if (currentMonthSummary.isTotalAdvance) MoneyAdvanceColor else MoneyDueColor
+                    val dueSubtitle = if (currentMonthSummary.isTotalAdvance) "মালিকের অতিরিক্ত দেওয়া" else "মালিকের নিকট বর্তমান পাওনা"
 
                     MetricCard(
                         title = dueTitle,
                         value = dueVal,
                         subtitle = dueSubtitle,
-                        icon = Icons.Default.ReceiptLong,
+                        icon = Icons.AutoMirrored.Filled.ReceiptLong,
                         iconColor = dueColor,
                         modifier = Modifier.weight(1f),
                         testTag = "metric_due",
@@ -349,8 +350,8 @@ fun DashboardScreen(
                     )
                     MetricCard(
                         title = "মোট খরচ",
-                        value = CurrencyFormatter.formatTaka(overallSummary.totalExpensePoisha, useBengaliDigits),
-                        subtitle = "খাবার: ${CurrencyFormatter.formatTaka(overallSummary.foodExpensePoisha, useBengaliDigits)}",
+                        value = CurrencyFormatter.formatTaka(currentMonthSummary.monthExpensePoisha, useBengaliDigits),
+                        subtitle = "খাবার: ${CurrencyFormatter.formatTaka(currentMonthSummary.monthFoodExpensePoisha, useBengaliDigits)}",
                         icon = Icons.Default.ShoppingCart,
                         iconColor = MoneyExpenseColor,
                         modifier = Modifier.weight(1f),
@@ -360,24 +361,24 @@ fun DashboardScreen(
                 }
             }
 
-            // Ratio Progress Card (Earnings vs Received vs Remaining Dues)
-            if (overallSummary.totalEarnedPoisha > 0L || overallSummary.totalReceivedPoisha > 0L) {
+            // Ratio Progress Card (Current Month Earnings vs Received vs Remaining Dues)
+            if (currentMonthSummary.monthEarnedPoisha > 0L || currentMonthSummary.monthReceivedPoisha > 0L) {
                 item {
-                    val recPercent = if (overallSummary.totalEarnedPoisha > 0L) {
-                        (overallSummary.totalReceivedPoisha.toFloat() / overallSummary.totalEarnedPoisha.toFloat())
+                    val recPercent = if (currentMonthSummary.monthEarnedPoisha > 0L) {
+                        (currentMonthSummary.monthReceivedPoisha.toFloat() / currentMonthSummary.monthEarnedPoisha.toFloat())
                     } else 0f
 
-                    val dueStr = if (overallSummary.isAdvance) {
-                        CurrencyFormatter.formatTaka(overallSummary.advancePoisha, useBengaliDigits)
+                    val dueStr = if (currentMonthSummary.isTotalAdvance) {
+                        CurrencyFormatter.formatTaka(currentMonthSummary.totalAdvancePoisha, useBengaliDigits)
                     } else {
-                        CurrencyFormatter.formatTaka(overallSummary.unpaidDuesPoisha, useBengaliDigits)
+                        CurrencyFormatter.formatTaka(currentMonthSummary.totalUnpaidDuesPoisha, useBengaliDigits)
                     }
 
                     ComparisonProgressCard(
-                        earnedAmountStr = CurrencyFormatter.formatTaka(overallSummary.totalEarnedPoisha, useBengaliDigits),
-                        receivedAmountStr = CurrencyFormatter.formatTaka(overallSummary.totalReceivedPoisha, useBengaliDigits),
+                        earnedAmountStr = CurrencyFormatter.formatTaka(currentMonthSummary.monthEarnedPoisha, useBengaliDigits),
+                        receivedAmountStr = CurrencyFormatter.formatTaka(currentMonthSummary.monthReceivedPoisha, useBengaliDigits),
                         dueOrAdvanceStr = dueStr,
-                        isAdvance = overallSummary.isAdvance,
+                        isAdvance = currentMonthSummary.isTotalAdvance,
                         receivedPercent = recPercent
                     )
                 }
@@ -403,9 +404,9 @@ fun DashboardScreen(
             if (recentActivities.isEmpty()) {
                 item {
                     EmptyStateView(
-                        title = "এখনও কোনো হিসাব যোগ করা হয়নি",
+                        title = "এই মাসে এখনও কোনো হিসাব যোগ করা হয়নি",
                         description = "নিচের প্লাস (+) বাটনে চেপে আজ কত হাজিরা কাজ করেছেন বা কত টাকা পেয়েছেন লিখে রাখুন।",
-                        icon = Icons.Default.ReceiptLong,
+                        icon = Icons.AutoMirrored.Filled.ReceiptLong,
                         actionButtonText = "প্রথম হিসাব যোগ করুন",
                         onActionClick = onAddWorkClick
                     )

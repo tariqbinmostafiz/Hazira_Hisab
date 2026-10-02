@@ -23,6 +23,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -100,7 +101,7 @@ class LedgerViewModel(application: Application) : AndroidViewModel(application) 
         set.sortedDescending()
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), listOf(YearMonth.now()))
 
-    // Monthly Accounting Summary: carries forward opening balances and calculates this month's financials
+    // Monthly Accounting Summary for Reports: carries forward opening balances and calculates selected month's financials
     val monthlySummary: StateFlow<MonthlyAccountingSummary> = combine(
         _selectedMonth,
         workEntries,
@@ -110,7 +111,16 @@ class LedgerViewModel(application: Application) : AndroidViewModel(application) 
         calculateMonthlySummary(month, works, pays, exps)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), MonthlyAccountingSummary(YearMonth.now()))
 
-    // Recent activities filtered for the selected month (or all recent activities if none in month)
+    // Current Month Summary for HOME screen: ALWAYS calculates for YearMonth.now()
+    val currentMonthSummary: StateFlow<MonthlyAccountingSummary> = combine(
+        workEntries,
+        payments,
+        expenses
+    ) { works, pays, exps ->
+        calculateMonthlySummary(YearMonth.now(), works, pays, exps)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), MonthlyAccountingSummary(YearMonth.now()))
+
+    // Recent activities filtered for the selected month in Reports
     val monthActivities: StateFlow<List<RecentActivityItem>> = combine(
         _selectedMonth,
         recentActivities
@@ -119,6 +129,13 @@ class LedgerViewModel(application: Application) : AndroidViewModel(application) 
         val monthFiltered = activities.filter { it.date.startsWith(prefix) }
         monthFiltered
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // Recent activities filtered for the current month on HOME screen
+    val currentMonthActivities: StateFlow<List<RecentActivityItem>> = recentActivities
+        .map { activities ->
+            val prefix = YearMonth.now().format(DateTimeFormatter.ofPattern("yyyy-MM"))
+            activities.filter { it.date.startsWith(prefix) }
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     fun selectMonth(yearMonth: YearMonth) {
         _selectedMonth.value = yearMonth

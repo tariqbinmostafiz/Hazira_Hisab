@@ -89,6 +89,8 @@ fun MainAppNavigation(viewModel: LedgerViewModel) {
         val availableMonths by viewModel.availableMonths.collectAsState()
         val monthlySummary by viewModel.monthlySummary.collectAsState()
         val monthActivities by viewModel.monthActivities.collectAsState()
+        val currentMonthSummary by viewModel.currentMonthSummary.collectAsState()
+        val currentMonthActivities by viewModel.currentMonthActivities.collectAsState()
         val aiAnalysis by viewModel.aiAnalysis.collectAsState()
         val isAiLoading by viewModel.isAiLoading.collectAsState()
 
@@ -157,9 +159,9 @@ fun MainAppNavigation(viewModel: LedgerViewModel) {
                 ) { dest ->
                     when (dest) {
                         NavDestination.HOME -> DashboardScreen(
-                            overallSummary = overallSummary,
+                            currentMonthSummary = currentMonthSummary,
                             todaySummary = todaySummary,
-                            recentActivities = recentActivities,
+                            recentActivities = currentMonthActivities,
                             useBengaliDigits = useBengaliDigits,
                             onAddWorkClick = {
                                 workToEdit = null
