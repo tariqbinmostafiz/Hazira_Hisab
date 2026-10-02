@@ -157,15 +157,9 @@ fun MainAppNavigation(viewModel: LedgerViewModel) {
                 ) { dest ->
                     when (dest) {
                         NavDestination.HOME -> DashboardScreen(
-                            monthlySummary = monthlySummary,
-                            selectedMonth = selectedMonth,
-                            availableMonths = availableMonths,
-                            onSelectMonth = { viewModel.selectMonth(it) },
-                            onPreviousMonth = { viewModel.goToPreviousMonth() },
-                            onNextMonth = { viewModel.goToNextMonth() },
-                            onResetToCurrentMonth = { viewModel.resetToCurrentMonth() },
+                            overallSummary = overallSummary,
                             todaySummary = todaySummary,
-                            recentActivities = if (monthActivities.isNotEmpty()) monthActivities else recentActivities,
+                            recentActivities = recentActivities,
                             useBengaliDigits = useBengaliDigits,
                             onAddWorkClick = {
                                 workToEdit = null
@@ -235,15 +229,21 @@ fun MainAppNavigation(viewModel: LedgerViewModel) {
                         )
 
                         NavDestination.REPORTS -> ReportsScreen(
+                            monthlySummary = monthlySummary,
+                            selectedMonth = selectedMonth,
+                            availableMonths = availableMonths,
+                            monthActivities = monthActivities,
                             periodSummary = periodSummary,
                             selectedPeriod = selectedPeriod,
                             useBengaliDigits = useBengaliDigits,
                             aiAnalysis = aiAnalysis,
                             isAiLoading = isAiLoading,
+                            onSelectMonth = { viewModel.selectMonth(it) },
+                            onPreviousMonth = { viewModel.goToPreviousMonth() },
+                            onNextMonth = { viewModel.goToNextMonth() },
+                            onResetToCurrentMonth = { viewModel.resetToCurrentMonth() },
                             onPeriodSelected = { viewModel.selectPeriod(it) },
-                            onRunAiAnalysis = { viewModel.runAiAnalysis() },
-                            monthlySummary = monthlySummary,
-                            selectedMonth = selectedMonth
+                            onRunAiAnalysis = { viewModel.runAiAnalysis() }
                         )
 
                         NavDestination.SETTINGS -> SettingsScreen(

@@ -205,6 +205,14 @@ object CurrencyFormatter {
     }
 
     /**
+     * Format a simple integer or long number into English or Bengali digits
+     */
+    fun formatNumber(number: Long, useBengaliDigits: Boolean = true): String {
+        val str = number.toString()
+        return if (useBengaliDigits) convertToBengaliDigits(str) else str
+    }
+
+    /**
      * Safely parse YYYY-MM-DD or YYYY-MM string to YearMonth
      */
     fun parseYearMonth(dateStr: String): java.time.YearMonth? {

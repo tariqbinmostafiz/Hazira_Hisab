@@ -24,36 +24,27 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDownward
-import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.AttachMoney
-import androidx.compose.material.icons.filled.CalendarMonth
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.EventAvailable
-import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.ReceiptLong
-import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material.icons.filled.Work
-import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -63,37 +54,28 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.domain.model.CurrencyFormatter
 import com.example.domain.model.DailySummary
 import com.example.domain.model.FinancialSummary
-import com.example.domain.model.MonthlyAccountingSummary
 import com.example.domain.model.RecentActivityItem
 import com.example.domain.model.TransactionType
-import com.example.ui.components.ComparisonProgressCard
-import com.example.ui.components.EmptyStateView
-import com.example.ui.components.MetricCard
 import com.example.ui.theme.MoneyAdvanceColor
 import com.example.ui.theme.MoneyDueColor
 import com.example.ui.theme.MoneyEarnedColor
 import com.example.ui.theme.MoneyExpenseColor
 import com.example.ui.theme.MoneyInHandColor
 import com.example.ui.theme.MoneyReceivedColor
-import java.time.YearMonth
 
 @Composable
 fun DashboardScreen(
-    monthlySummary: MonthlyAccountingSummary,
-    selectedMonth: YearMonth,
-    availableMonths: List<YearMonth>,
-    onSelectMonth: (YearMonth) -> Unit,
-    onPreviousMonth: () -> Unit,
-    onNextMonth: () -> Unit,
-    onResetToCurrentMonth: () -> Unit,
+    overallSummary: FinancialSummary,
     todaySummary: DailySummary,
     recentActivities: List<RecentActivityItem>,
     useBengaliDigits: Boolean,
@@ -106,86 +88,6 @@ fun DashboardScreen(
     modifier: Modifier = Modifier
 ) {
     var isFabExpanded by remember { mutableStateOf(false) }
-    var showMonthDialog by remember { mutableStateOf(false) }
-    val isCurrentMonth = selectedMonth == YearMonth.now()
-
-    // Month Selection Dialog
-    if (showMonthDialog) {
-        AlertDialog(
-            onDismissRequest = { showMonthDialog = false },
-            title = {
-                Text(
-                    text = "মাস নির্বাচন",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
-                )
-            },
-            text = {
-                LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    items(availableMonths) { month ->
-                        val isSelected = month == selectedMonth
-                        val isNow = month == YearMonth.now()
-                        Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    onSelectMonth(month)
-                                    showMonthDialog = false
-                                }
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(
-                                        text = CurrencyFormatter.formatYearMonthBengali(month, useBengaliDigits),
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                        color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
-                                    )
-                                    if (isNow) {
-                                        Spacer(Modifier.width(8.dp))
-                                        Surface(
-                                            shape = RoundedCornerShape(6.dp),
-                                            color = MaterialTheme.colorScheme.primary
-                                        ) {
-                                            Text(
-                                                text = "চলতি মাস",
-                                                style = MaterialTheme.typography.labelSmall,
-                                                color = MaterialTheme.colorScheme.onPrimary,
-                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                            )
-                                        }
-                                    }
-                                }
-                                if (isSelected) {
-                                    Icon(
-                                        imageVector = Icons.Default.Check,
-                                        contentDescription = "নির্বাচিত",
-                                        tint = MaterialTheme.colorScheme.primary
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { showMonthDialog = false }) {
-                    Text("বন্ধ করুন")
-                }
-            }
-        )
-    }
 
     Box(modifier = modifier.fillMaxSize()) {
         LazyColumn(
@@ -195,7 +97,7 @@ fun DashboardScreen(
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 96.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Header
+            // Header: "হাজিরা হিসাব" & "আজ (তারিখ)"
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -210,7 +112,7 @@ fun DashboardScreen(
                             color = MaterialTheme.colorScheme.onBackground
                         )
                         Text(
-                            text = CurrencyFormatter.formatDateBengali(CurrencyFormatter.todayIso(), useBengaliDigits),
+                            text = "আজ (${CurrencyFormatter.formatDateBengali(CurrencyFormatter.todayIso(), useBengaliDigits)})",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -218,375 +120,112 @@ fun DashboardScreen(
                 }
             }
 
-            // Month Selector Bar
+            // Clean "আজকের দিনের হিসাব" Card
             item {
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .testTag("month_selector_card"),
-                    shape = RoundedCornerShape(16.dp),
+                        .testTag("today_summary_card"),
+                    shape = RoundedCornerShape(20.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
+                        containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.65f)
                     )
                 ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 8.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        IconButton(
-                            onClick = onPreviousMonth,
-                            modifier = Modifier.testTag("btn_prev_month")
+                    Column(modifier = Modifier.padding(18.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "পূর্ববর্তী মাস"
+                            Box(
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.primary),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.EventAvailable,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onPrimary,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Text(
+                                text = "আজকের দিনের হিসাব",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
                             )
                         }
 
-                        Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = MaterialTheme.colorScheme.primaryContainer,
-                            modifier = Modifier
-                                .clickable { showMonthDialog = true }
-                                .testTag("btn_month_picker")
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.CalendarMonth,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                Spacer(Modifier.width(8.dp))
+                            Column {
                                 Text(
-                                    text = CurrencyFormatter.formatYearMonthBengali(selectedMonth, useBengaliDigits),
+                                    text = "আজকের কাজ",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                                )
+                                Text(
+                                    text = CurrencyFormatter.formatAttendance(todaySummary.attendanceUnits, useBengaliDigits),
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onPrimaryContainer
                                 )
-                                if (isCurrentMonth) {
-                                    Spacer(Modifier.width(6.dp))
-                                    Surface(
-                                        shape = RoundedCornerShape(6.dp),
-                                        color = MaterialTheme.colorScheme.primary
-                                    ) {
-                                        Text(
-                                            text = "চলতি মাস",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.onPrimary,
-                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                        )
-                                    }
-                                }
-                                Spacer(Modifier.width(4.dp))
-                                Icon(
-                                    imageVector = Icons.Default.ArrowDropDown,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onPrimaryContainer
-                                )
                             }
-                        }
 
-                        IconButton(
-                            onClick = onNextMonth,
-                            modifier = Modifier.testTag("btn_next_month")
-                        ) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                                contentDescription = "পরবর্তী মাস"
-                            )
-                        }
-                    }
-                }
-            }
-
-            // Return to Current Month Banner (if viewing previous month)
-            if (!isCurrentMonth) {
-                item {
-                    Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 14.dp, vertical = 8.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.History,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onSecondaryContainer,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                Spacer(Modifier.width(8.dp))
+                            Column {
                                 Text(
-                                    text = "আপনি ${CurrencyFormatter.formatYearMonthBengali(selectedMonth, useBengaliDigits)} এর হিসাব দেখছেন",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    fontWeight = FontWeight.Medium,
-                                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                                    text = "আজকের আয়",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                                )
+                                Text(
+                                    text = CurrencyFormatter.formatTaka(todaySummary.earnedPoisha, useBengaliDigits),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MoneyEarnedColor
                                 )
                             }
-                            TextButton(
-                                onClick = onResetToCurrentMonth,
-                                modifier = Modifier.testTag("btn_back_to_current_month")
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.RestartAlt,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(16.dp)
+
+                            Column {
+                                Text(
+                                    text = "আজকের পাওয়া",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
                                 )
-                                Spacer(Modifier.width(4.dp))
-                                Text(text = "চলতি মাস")
+                                Text(
+                                    text = CurrencyFormatter.formatTaka(todaySummary.receivedPoisha, useBengaliDigits),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MoneyReceivedColor
+                                )
+                            }
+
+                            Column {
+                                Text(
+                                    text = "আজকের খরচ",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                                )
+                                Text(
+                                    text = CurrencyFormatter.formatTaka(todaySummary.expensePoisha, useBengaliDigits),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MoneyExpenseColor
+                                )
                             }
                         }
                     }
                 }
             }
 
-            // Today's Activity Banner (shown if viewing current month)
-            if (isCurrentMonth) {
-                item {
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .testTag("today_summary_card"),
-                        shape = RoundedCornerShape(20.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.65f)
-                        )
-                    ) {
-                        Column(modifier = Modifier.padding(18.dp)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(32.dp)
-                                            .clip(CircleShape)
-                                            .background(MaterialTheme.colorScheme.primary),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.EventAvailable,
-                                            contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.onPrimary,
-                                            modifier = Modifier.size(18.dp)
-                                        )
-                                    }
-                                    Spacer(modifier = Modifier.width(10.dp))
-                                    Text(
-                                        text = "আজকের দিনের হিসাব",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                                    )
-                                }
-                            }
-
-                            Spacer(modifier = Modifier.height(14.dp))
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Column {
-                                    Text(
-                                        text = "আজকের কাজ",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
-                                    )
-                                    Text(
-                                        text = CurrencyFormatter.formatAttendance(todaySummary.attendanceUnits, useBengaliDigits),
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                                    )
-                                }
-
-                                Column {
-                                    Text(
-                                        text = "আজকের আয়",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
-                                    )
-                                    Text(
-                                        text = CurrencyFormatter.formatTaka(todaySummary.earnedPoisha, useBengaliDigits),
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MoneyEarnedColor
-                                    )
-                                }
-
-                                Column {
-                                    Text(
-                                        text = "আজকের পাওয়া",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
-                                    )
-                                    Text(
-                                        text = CurrencyFormatter.formatTaka(todaySummary.receivedPoisha, useBengaliDigits),
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MoneyReceivedColor
-                                    )
-                                }
-
-                                Column {
-                                    Text(
-                                        text = "আজকের খরচ",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
-                                    )
-                                    Text(
-                                        text = CurrencyFormatter.formatTaka(todaySummary.expensePoisha, useBengaliDigits),
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MoneyExpenseColor
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Opening Balance Card (পূর্বের বকেয়া ও নগদ স্থিতি carried forward)
-            if (monthlySummary.hasPreviousData || monthlySummary.previousDuesPoisha != 0L || monthlySummary.previousCashInHandPoisha != 0L) {
-                item {
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .testTag("opening_balance_card"),
-                        shape = RoundedCornerShape(20.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.65f)
-                        ),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-                    ) {
-                        Column(modifier = Modifier.padding(18.dp)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(32.dp)
-                                        .clip(CircleShape)
-                                        .background(MaterialTheme.colorScheme.secondary),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.History,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.onSecondary,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                }
-                                Spacer(modifier = Modifier.width(10.dp))
-                                Column {
-                                    Text(
-                                        text = "পূর্বের বকেয়া ও নগদ স্থিতি",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                    Text(
-                                        text = "এই মাস শুরু হওয়ার আগের অমীমাংসিত হিসাবের জের",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
-                                    )
-                                }
-                            }
-
-                            Spacer(modifier = Modifier.height(14.dp))
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
-                            ) {
-                                // Previous Outstanding Dues
-                                val prevDueTitle = if (monthlySummary.isPreviousAdvance) "পূর্বের অগ্রিম" else "পূর্বের বকেয়া"
-                                val prevDueVal = if (monthlySummary.isPreviousAdvance)
-                                    CurrencyFormatter.formatTaka(monthlySummary.previousAdvancePoisha, useBengaliDigits)
-                                else
-                                    CurrencyFormatter.formatTaka(monthlySummary.previousUnpaidDuesPoisha, useBengaliDigits)
-                                val prevDueColor = if (monthlySummary.isPreviousAdvance) MoneyAdvanceColor else MoneyDueColor
-
-                                Surface(
-                                    modifier = Modifier.weight(1f),
-                                    shape = RoundedCornerShape(12.dp),
-                                    color = MaterialTheme.colorScheme.surface
-                                ) {
-                                    Column(modifier = Modifier.padding(12.dp)) {
-                                        Text(
-                                            text = prevDueTitle,
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                                        )
-                                        Spacer(Modifier.height(4.dp))
-                                        Text(
-                                            text = prevDueVal,
-                                            style = MaterialTheme.typography.titleMedium,
-                                            fontWeight = FontWeight.Bold,
-                                            color = prevDueColor
-                                        )
-                                        Text(
-                                            text = if (monthlySummary.isPreviousAdvance) "অতিরিক্ত নেওয়া" else "আগের বাকি পাওনা",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                                        )
-                                    }
-                                }
-
-                                // Previous Cash in Hand
-                                Surface(
-                                    modifier = Modifier.weight(1f),
-                                    shape = RoundedCornerShape(12.dp),
-                                    color = MaterialTheme.colorScheme.surface
-                                ) {
-                                    Column(modifier = Modifier.padding(12.dp)) {
-                                        Text(
-                                            text = "পূর্বের নগদ স্থিতি",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                                        )
-                                        Spacer(Modifier.height(4.dp))
-                                        Text(
-                                            text = CurrencyFormatter.formatTaka(monthlySummary.previousCashInHandPoisha, useBengaliDigits),
-                                            style = MaterialTheme.typography.titleMedium,
-                                            fontWeight = FontWeight.Bold,
-                                            color = if (monthlySummary.previousCashInHandPoisha >= 0) MoneyInHandColor else MoneyExpenseColor
-                                        )
-                                        Text(
-                                            text = "আগের মাসের অবশিষ্ট নগদ",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Cash in Hand Hero Card (Hate ache)
+            // Cash in Hand Hero Card ("হাতে থাকা নগদ টাকা")
             item {
                 Card(
                     modifier = Modifier
@@ -594,7 +233,7 @@ fun DashboardScreen(
                         .testTag("cash_in_hand_card"),
                     shape = RoundedCornerShape(20.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = if (monthlySummary.totalCashInHandPoisha >= 0)
+                        containerColor = if (overallSummary.cashInHandPoisha >= 0)
                             Color(0xFFE8F5E9)
                         else
                             Color(0xFFFFEBEE)
@@ -615,7 +254,7 @@ fun DashboardScreen(
                                         .size(36.dp)
                                         .clip(CircleShape)
                                         .background(
-                                            if (monthlySummary.totalCashInHandPoisha >= 0) MoneyInHandColor else MoneyExpenseColor
+                                            if (overallSummary.cashInHandPoisha >= 0) MoneyInHandColor else MoneyExpenseColor
                                         ),
                                     contentAlignment = Alignment.Center
                                 ) {
@@ -632,15 +271,10 @@ fun DashboardScreen(
                                         text = "হাতে থাকা নগদ টাকা",
                                         style = MaterialTheme.typography.titleMedium,
                                         fontWeight = FontWeight.Bold,
-                                        color = if (monthlySummary.totalCashInHandPoisha >= 0) Color(0xFF1B5E20) else Color(0xFFB71C1C)
+                                        color = if (overallSummary.cashInHandPoisha >= 0) Color(0xFF1B5E20) else Color(0xFFB71C1C)
                                     )
-                                    val cashSubtitle = if (monthlySummary.previousCashInHandPoisha != 0L) {
-                                        "পূর্বের নগদ (${CurrencyFormatter.formatTaka(monthlySummary.previousCashInHandPoisha, useBengaliDigits)}) + এই মাসে প্রাপ্তি - নগদ খরচ"
-                                    } else {
-                                        "এই মাসে পাওয়া টাকা থেকে নগদ খরচ বাদে"
-                                    }
                                     Text(
-                                        text = cashSubtitle,
+                                        text = "মোট পাওয়া টাকা থেকে খরচ বাদে",
                                         style = MaterialTheme.typography.bodySmall,
                                         color = Color.Black.copy(alpha = 0.6f)
                                     )
@@ -649,27 +283,27 @@ fun DashboardScreen(
                         }
 
                         Text(
-                            text = CurrencyFormatter.formatTaka(monthlySummary.totalCashInHandPoisha, useBengaliDigits),
+                            text = CurrencyFormatter.formatTaka(overallSummary.cashInHandPoisha, useBengaliDigits),
                             style = MaterialTheme.typography.headlineSmall.copy(
                                 fontWeight = FontWeight.Bold,
                                 letterSpacing = (-0.5).sp
                             ),
-                            color = if (monthlySummary.totalCashInHandPoisha >= 0) MoneyInHandColor else MoneyExpenseColor
+                            color = if (overallSummary.cashInHandPoisha >= 0) MoneyInHandColor else MoneyExpenseColor
                         )
                     }
                 }
             }
 
-            // Metric Cards Grid (This Month's Numbers)
+            // Main Financial Cards (Row 1: মোট প্রাপ্য আয় & মোট পাওয়া টাকা)
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     MetricCard(
-                        title = "এই মাসের প্রাপ্য আয়",
-                        value = CurrencyFormatter.formatTaka(monthlySummary.monthEarnedPoisha, useBengaliDigits),
-                        subtitle = "মোট ${CurrencyFormatter.formatAttendance(monthlySummary.monthAttendanceUnits, useBengaliDigits)}",
+                        title = "মোট প্রাপ্য আয়",
+                        value = CurrencyFormatter.formatTaka(overallSummary.totalEarnedPoisha, useBengaliDigits),
+                        subtitle = "মোট ${CurrencyFormatter.formatAttendance(overallSummary.totalAttendanceUnits, useBengaliDigits)}",
                         icon = Icons.Default.TrendingUp,
                         iconColor = MoneyEarnedColor,
                         modifier = Modifier.weight(1f),
@@ -677,9 +311,9 @@ fun DashboardScreen(
                         onClick = onNavigateToWork
                     )
                     MetricCard(
-                        title = "এই মাসে পাওয়া টাকা",
-                        value = CurrencyFormatter.formatTaka(monthlySummary.monthReceivedPoisha, useBengaliDigits),
-                        subtitle = "এই মাসে নগদ আদায়",
+                        title = "মোট পাওয়া টাকা",
+                        value = CurrencyFormatter.formatTaka(overallSummary.totalReceivedPoisha, useBengaliDigits),
+                        subtitle = "নগদ আদায়",
                         icon = Icons.Default.AttachMoney,
                         iconColor = MoneyReceivedColor,
                         modifier = Modifier.weight(1f),
@@ -689,28 +323,24 @@ fun DashboardScreen(
                 }
             }
 
+            // Main Financial Cards (Row 2: মোট বাকি পাওনা & মোট খরচ)
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    val dueTitle = if (monthlySummary.isTotalAdvance) "মোট অগ্রিম নেওয়া" else "মোট বাকি পাওনা"
-                    val dueVal = if (monthlySummary.isTotalAdvance)
-                        CurrencyFormatter.formatTaka(monthlySummary.totalAdvancePoisha, useBengaliDigits)
+                    val dueTitle = if (overallSummary.isAdvance) "অগ্রিম নেওয়া টাকা" else "মোট বাকি পাওনা"
+                    val dueVal = if (overallSummary.isAdvance)
+                        CurrencyFormatter.formatTaka(overallSummary.advancePoisha, useBengaliDigits)
                     else
-                        CurrencyFormatter.formatTaka(monthlySummary.totalUnpaidDuesPoisha, useBengaliDigits)
-                    val dueColor = if (monthlySummary.isTotalAdvance) MoneyAdvanceColor else MoneyDueColor
-
-                    val dueSub = if (monthlySummary.previousDuesPoisha != 0L) {
-                        "পূর্বের: ${CurrencyFormatter.formatTaka(monthlySummary.previousDuesPoisha, useBengaliDigits)} + নতুন: ${CurrencyFormatter.formatTaka(monthlySummary.monthNetDueChangePoisha, useBengaliDigits)}"
-                    } else {
-                        "মালিকের নিকট বর্তমান পাওনা"
-                    }
+                        CurrencyFormatter.formatTaka(overallSummary.unpaidDuesPoisha, useBengaliDigits)
+                    val dueColor = if (overallSummary.isAdvance) MoneyAdvanceColor else MoneyDueColor
+                    val dueSubtitle = if (overallSummary.isAdvance) "মালিকের অতিরিক্ত দেওয়া" else "মালিকের নিকট পাওনা"
 
                     MetricCard(
                         title = dueTitle,
                         value = dueVal,
-                        subtitle = dueSub,
+                        subtitle = dueSubtitle,
                         icon = Icons.Default.ReceiptLong,
                         iconColor = dueColor,
                         modifier = Modifier.weight(1f),
@@ -718,9 +348,9 @@ fun DashboardScreen(
                         onClick = onNavigateToPayments
                     )
                     MetricCard(
-                        title = "এই মাসের মোট খরচ",
-                        value = CurrencyFormatter.formatTaka(monthlySummary.monthExpensePoisha, useBengaliDigits),
-                        subtitle = "খাবার: ${CurrencyFormatter.formatTaka(monthlySummary.monthFoodExpensePoisha, useBengaliDigits)}",
+                        title = "মোট খরচ",
+                        value = CurrencyFormatter.formatTaka(overallSummary.totalExpensePoisha, useBengaliDigits),
+                        subtitle = "খাবার: ${CurrencyFormatter.formatTaka(overallSummary.foodExpensePoisha, useBengaliDigits)}",
                         icon = Icons.Default.ShoppingCart,
                         iconColor = MoneyExpenseColor,
                         modifier = Modifier.weight(1f),
@@ -730,136 +360,24 @@ fun DashboardScreen(
                 }
             }
 
-            // Dedicated Monthly Summary Card (মাসিক হিসাবের সারসংক্ষেপ)
-            item {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag("monthly_detailed_summary_card"),
-                    shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surface
-                    ),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                ) {
-                    Column(modifier = Modifier.padding(18.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "${CurrencyFormatter.formatYearMonthBengali(selectedMonth, useBengaliDigits)} - মাসিক সারসংক্ষেপ",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        MonthlySummaryRow(
-                            label = "মোট কাজ / হাজিরা",
-                            value = CurrencyFormatter.formatAttendance(monthlySummary.monthAttendanceUnits, useBengaliDigits)
-                        )
-                        MonthlySummaryRow(
-                            label = "এই মাসের নতুন আয়",
-                            value = CurrencyFormatter.formatTaka(monthlySummary.monthEarnedPoisha, useBengaliDigits),
-                            valueColor = MoneyEarnedColor,
-                            isBold = true
-                        )
-                        MonthlySummaryRow(
-                            label = "এই মাসে পাওয়া টাকা",
-                            value = CurrencyFormatter.formatTaka(monthlySummary.monthReceivedPoisha, useBengaliDigits),
-                            valueColor = MoneyReceivedColor
-                        )
-                        if (monthlySummary.monthDeductedFromDuesPoisha > 0L) {
-                            MonthlySummaryRow(
-                                label = "পাওনা টাকা থেকে কাটা খরচ",
-                                value = CurrencyFormatter.formatTaka(monthlySummary.monthDeductedFromDuesPoisha, useBengaliDigits),
-                                valueColor = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                        MonthlySummaryRow(
-                            label = "এই মাসের বকেয়া পরিবর্তন",
-                            value = CurrencyFormatter.formatTaka(monthlySummary.monthNetDueChangePoisha, useBengaliDigits),
-                            valueColor = if (monthlySummary.monthNetDueChangePoisha >= 0) MoneyDueColor else MoneyAdvanceColor
-                        )
-                        if (monthlySummary.previousDuesPoisha != 0L) {
-                            MonthlySummaryRow(
-                                label = "পূর্বের বকেয়া (আগের জের)",
-                                value = CurrencyFormatter.formatTaka(monthlySummary.previousDuesPoisha, useBengaliDigits)
-                            )
-                        }
-                        MonthlySummaryRow(
-                            label = if (monthlySummary.isTotalAdvance) "সর্বমোট অগ্রিম" else "সর্বমোট বর্তমান বকেয়া",
-                            value = if (monthlySummary.isTotalAdvance)
-                                CurrencyFormatter.formatTaka(monthlySummary.totalAdvancePoisha, useBengaliDigits)
-                            else
-                                CurrencyFormatter.formatTaka(monthlySummary.totalUnpaidDuesPoisha, useBengaliDigits),
-                            valueColor = if (monthlySummary.isTotalAdvance) MoneyAdvanceColor else MoneyDueColor,
-                            isBold = true
-                        )
-
-                        HorizontalDivider(
-                            modifier = Modifier.padding(vertical = 10.dp),
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                        )
-
-                        MonthlySummaryRow(
-                            label = "খাবার খরচ",
-                            value = CurrencyFormatter.formatTaka(monthlySummary.monthFoodExpensePoisha, useBengaliDigits)
-                        )
-                        MonthlySummaryRow(
-                            label = "অন্যান্য খরচ",
-                            value = CurrencyFormatter.formatTaka(monthlySummary.monthOtherExpensePoisha, useBengaliDigits)
-                        )
-                        MonthlySummaryRow(
-                            label = "মোট খরচ",
-                            value = CurrencyFormatter.formatTaka(monthlySummary.monthExpensePoisha, useBengaliDigits),
-                            valueColor = MoneyExpenseColor,
-                            isBold = true
-                        )
-
-                        HorizontalDivider(
-                            modifier = Modifier.padding(vertical = 10.dp),
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                        )
-
-                        if (monthlySummary.previousCashInHandPoisha != 0L) {
-                            MonthlySummaryRow(
-                                label = "পূর্বের নগদ স্থিতি",
-                                value = CurrencyFormatter.formatTaka(monthlySummary.previousCashInHandPoisha, useBengaliDigits)
-                            )
-                        }
-                        MonthlySummaryRow(
-                            label = "হাতে থাকা নগদ টাকা",
-                            value = CurrencyFormatter.formatTaka(monthlySummary.totalCashInHandPoisha, useBengaliDigits),
-                            valueColor = if (monthlySummary.totalCashInHandPoisha >= 0) MoneyInHandColor else MoneyExpenseColor,
-                            isBold = true
-                        )
-                    }
-                }
-            }
-
-            // Ratio Progress Card
-            if (monthlySummary.monthEarnedPoisha > 0L || monthlySummary.monthReceivedPoisha > 0L) {
+            // Ratio Progress Card (Earnings vs Received vs Remaining Dues)
+            if (overallSummary.totalEarnedPoisha > 0L || overallSummary.totalReceivedPoisha > 0L) {
                 item {
-                    val recPercent = if (monthlySummary.monthEarnedPoisha > 0L) {
-                        (monthlySummary.monthReceivedPoisha.toFloat() / monthlySummary.monthEarnedPoisha.toFloat())
+                    val recPercent = if (overallSummary.totalEarnedPoisha > 0L) {
+                        (overallSummary.totalReceivedPoisha.toFloat() / overallSummary.totalEarnedPoisha.toFloat())
                     } else 0f
 
-                    val dueStr = if (monthlySummary.isTotalAdvance) {
-                        CurrencyFormatter.formatTaka(monthlySummary.totalAdvancePoisha, useBengaliDigits)
+                    val dueStr = if (overallSummary.isAdvance) {
+                        CurrencyFormatter.formatTaka(overallSummary.advancePoisha, useBengaliDigits)
                     } else {
-                        CurrencyFormatter.formatTaka(monthlySummary.totalUnpaidDuesPoisha, useBengaliDigits)
+                        CurrencyFormatter.formatTaka(overallSummary.unpaidDuesPoisha, useBengaliDigits)
                     }
 
                     ComparisonProgressCard(
-                        earnedAmountStr = CurrencyFormatter.formatTaka(monthlySummary.monthEarnedPoisha, useBengaliDigits),
-                        receivedAmountStr = CurrencyFormatter.formatTaka(monthlySummary.monthReceivedPoisha, useBengaliDigits),
+                        earnedAmountStr = CurrencyFormatter.formatTaka(overallSummary.totalEarnedPoisha, useBengaliDigits),
+                        receivedAmountStr = CurrencyFormatter.formatTaka(overallSummary.totalReceivedPoisha, useBengaliDigits),
                         dueOrAdvanceStr = dueStr,
-                        isAdvance = monthlySummary.isTotalAdvance,
+                        isAdvance = overallSummary.isAdvance,
                         receivedPercent = recPercent
                     )
                 }
@@ -873,7 +391,7 @@ fun DashboardScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "${CurrencyFormatter.formatYearMonthBengali(selectedMonth, useBengaliDigits)} এর হিসাব",
+                        text = "সাম্প্রতিক হিসাব",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onBackground
@@ -885,7 +403,7 @@ fun DashboardScreen(
             if (recentActivities.isEmpty()) {
                 item {
                     EmptyStateView(
-                        title = "এই মাসে এখনও কোনো হিসাব যোগ করা হয়নি",
+                        title = "এখনও কোনো হিসাব যোগ করা হয়নি",
                         description = "নিচের প্লাস (+) বাটনে চেপে আজ কত হাজিরা কাজ করেছেন বা কত টাকা পেয়েছেন লিখে রাখুন।",
                         icon = Icons.Default.ReceiptLong,
                         actionButtonText = "প্রথম হিসাব যোগ করুন",
@@ -1038,6 +556,182 @@ fun DashboardScreen(
 }
 
 @Composable
+fun MetricCard(
+    title: String,
+    value: String,
+    subtitle: String,
+    icon: ImageVector,
+    iconColor: Color,
+    modifier: Modifier = Modifier,
+    testTag: String = "",
+    onClick: () -> Unit = {}
+) {
+    Card(
+        modifier = modifier
+            .testTag(testTag)
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f)
+                )
+                Box(
+                    modifier = Modifier
+                        .size(32.dp)
+                        .clip(CircleShape)
+                        .background(iconColor.copy(alpha = 0.12f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = iconColor,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            Text(
+                text = value,
+                style = MaterialTheme.typography.titleLarge.copy(
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = (-0.5).sp
+                ),
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
+@Composable
+fun ComparisonProgressCard(
+    earnedAmountStr: String,
+    receivedAmountStr: String,
+    dueOrAdvanceStr: String,
+    isAdvance: Boolean,
+    receivedPercent: Float,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Column(modifier = Modifier.padding(18.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "আয় ও আদায়ের অনুপাত",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                val pct = (receivedPercent * 100).toInt().coerceIn(0, 999)
+                Text(
+                    text = "${CurrencyFormatter.formatNumber(pct.toLong(), true)}% আদায়",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MoneyReceivedColor
+                )
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            LinearProgressIndicator(
+                progress = { receivedPercent.coerceIn(0f, 1f) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(8.dp)
+                    .clip(CircleShape),
+                color = MoneyReceivedColor,
+                trackColor = MoneyReceivedColor.copy(alpha = 0.15f)
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column {
+                    Text(
+                        text = "মোট আয়",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = earnedAmountStr,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MoneyEarnedColor
+                    )
+                }
+
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "আদায় হয়েছে",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = receivedAmountStr,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MoneyReceivedColor
+                    )
+                }
+
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(
+                        text = if (isAdvance) "অগ্রিম" else "বাকি পাওনা",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = dueOrAdvanceStr,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = if (isAdvance) MoneyAdvanceColor else MoneyDueColor
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
 fun RecentActivityRow(
     item: RecentActivityItem,
     useBengaliDigits: Boolean,
@@ -1139,29 +833,70 @@ fun RecentActivityRow(
 }
 
 @Composable
-private fun MonthlySummaryRow(
-    label: String,
-    value: String,
-    valueColor: Color = MaterialTheme.colorScheme.onSurface,
-    isBold: Boolean = false
+fun EmptyStateView(
+    title: String,
+    description: String,
+    icon: ImageVector,
+    actionButtonText: String,
+    onActionClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
     ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Text(
-            text = value,
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = if (isBold) FontWeight.Bold else FontWeight.SemiBold,
-            color = valueColor
-        )
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(28.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(64.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primaryContainer),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(32.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+                textAlign = TextAlign.Center
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center
+            )
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            Button(
+                onClick = onActionClick,
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Icon(imageVector = Icons.Default.Add, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(actionButtonText)
+            }
+        }
     }
 }
