@@ -1,5 +1,6 @@
 package com.example.ui.navigation
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -9,12 +10,14 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AttachMoney
 import androidx.compose.material.icons.filled.Assessment
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Work
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -26,6 +29,8 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -61,6 +66,7 @@ enum class NavDestination(val route: String, val title: String, val icon: ImageV
     SETTINGS("settings", "সেটিংস", Icons.Default.Settings)
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainAppNavigation(viewModel: LedgerViewModel) {
     val themeMode by viewModel.themeMode.collectAsState()
@@ -73,6 +79,11 @@ fun MainAppNavigation(viewModel: LedgerViewModel) {
     MyApplicationTheme(darkTheme = isDark) {
         val snackbarHostState = remember { SnackbarHostState() }
         var currentDestination by remember { mutableStateOf(NavDestination.HOME) }
+
+        // BackHandler: Return to Home if on another screen
+        BackHandler(enabled = currentDestination != NavDestination.HOME) {
+            currentDestination = NavDestination.HOME
+        }
 
         // State flows from ViewModel
         val overallSummary by viewModel.overallSummary.collectAsState()
@@ -121,15 +132,81 @@ fun MainAppNavigation(viewModel: LedgerViewModel) {
         Scaffold(
             modifier = Modifier.fillMaxSize(),
             snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
+            topBar = {
+                TopAppBar(
+                    title = {
+                        if (currentDestination != NavDestination.HOME) {
+                            Text(
+                                text = when (currentDestination) {
+                                    NavDestination.WORK -> "কাজের হাজিরা"
+                                    NavDestination.PAYMENTS -> "টাকা প্রাপ্তির হিসাব"
+                                    NavDestination.EXPENSES -> "খরচের হিসাব"
+                                    NavDestination.REPORTS -> "হিসাবের রিপোর্ট"
+                                    NavDestination.SETTINGS -> "সেটিংস ও ব্যাকআপ"
+                                    else -> ""
+                                },
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                            )
+                        }
+                    },
+                    navigationIcon = {
+                        if (currentDestination == NavDestination.REPORTS || currentDestination == NavDestination.SETTINGS) {
+                            IconButton(
+                                onClick = { currentDestination = NavDestination.HOME },
+                                modifier = Modifier.testTag("top_bar_back_btn")
+                            ) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                    contentDescription = "হোমে ফিরে যান"
+                                )
+                            }
+                        }
+                    },
+                    actions = {
+                        // Top App Bar Report Button
+                        IconButton(
+                            onClick = { currentDestination = NavDestination.REPORTS },
+                            modifier = Modifier.testTag("top_bar_report_btn")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Assessment,
+                                contentDescription = "রিপোর্ট",
+                                tint = if (currentDestination == NavDestination.REPORTS)
+                                    MaterialTheme.colorScheme.primary
+                                else
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        // Top App Bar Settings Button
+                        IconButton(
+                            onClick = { currentDestination = NavDestination.SETTINGS },
+                            modifier = Modifier.testTag("top_bar_settings_btn")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Settings,
+                                contentDescription = "সেটিংস",
+                                tint = if (currentDestination == NavDestination.SETTINGS)
+                                    MaterialTheme.colorScheme.primary
+                                else
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        titleContentColor = MaterialTheme.colorScheme.onSurface
+                    )
+                )
+            },
             bottomBar = {
+                // Clean 4-item Bottom Navigation Bar (Home, Work, Payments, Expenses)
                 NavigationBar(modifier = Modifier.testTag("main_bottom_nav")) {
                     listOf(
                         NavDestination.HOME,
                         NavDestination.WORK,
                         NavDestination.PAYMENTS,
-                        NavDestination.EXPENSES,
-                        NavDestination.REPORTS,
-                        NavDestination.SETTINGS
+                        NavDestination.EXPENSES
                     ).forEach { destination ->
                         NavigationBarItem(
                             selected = currentDestination == destination,

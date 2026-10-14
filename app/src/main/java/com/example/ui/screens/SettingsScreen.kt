@@ -1,6 +1,7 @@
 package com.example.ui.screens
 
 import android.content.Intent
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
@@ -28,7 +29,13 @@ import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Numbers
 import androidx.compose.material.icons.filled.Restore
+import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Science
+import androidx.compose.material.icons.filled.Share
+import androidx.core.content.FileProvider
+import java.io.File
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -80,6 +87,62 @@ fun SettingsScreen(
     var showRateDialog by remember { mutableStateOf(false) }
     var showThemeDialog by remember { mutableStateOf(false) }
     var showResetDialog by remember { mutableStateOf(false) }
+    var showBackupOptionsDialog by remember { mutableStateOf(false) }
+    var pendingBackupJson by remember { mutableStateOf<String?>(null) }
+
+    fun shareBackupAsFile(json: String) {
+        try {
+            val dateStr = LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE)
+            val fileName = "hazira_hisab_backup_$dateStr.json"
+            val backupDir = File(context.cacheDir, "backups").apply { mkdirs() }
+            val backupFile = File(backupDir, fileName)
+            backupFile.writeText(json, Charsets.UTF_8)
+
+            val fileUri = FileProvider.getUriForFile(
+                context,
+                "${context.packageName}.fileprovider",
+                backupFile
+            )
+
+            val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                type = "application/json"
+                putExtra(Intent.EXTRA_STREAM, fileUri)
+                putExtra(Intent.EXTRA_SUBJECT, fileName)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            val chooser = Intent.createChooser(shareIntent, "হিসাবের ব্যাকআপ ফাইল শেয়ার করুন").apply {
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            context.startActivity(chooser)
+        } catch (e: Exception) {
+            Toast.makeText(context, "ফাইল শেয়ার করতে সমস্যা হয়েছে: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    // SAF Document Creator for saving JSON file to device/Downloads
+    val createDocumentLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/json")
+    ) { uri ->
+        if (uri != null) {
+            scope.launch {
+                try {
+                    val json = pendingBackupJson ?: onExportBackup()
+                    context.contentResolver.openOutputStream(uri)?.use { output ->
+                        output.write(json.toByteArray(Charsets.UTF_8))
+                        output.flush()
+                    }
+                    Toast.makeText(context, "হিসাবের ব্যাকআপ ফাইলটি সফলভাবে ডিভাইসে সংরক্ষিত হয়েছে", Toast.LENGTH_LONG).show()
+                } catch (e: Exception) {
+                    Toast.makeText(context, "ফাইল সংরক্ষণ করতে ত্রুটি হয়েছে: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+                } finally {
+                    pendingBackupJson = null
+                }
+            }
+        } else {
+            pendingBackupJson = null
+            Toast.makeText(context, "ফাইল সংরক্ষণ বাতিল করা হয়েছে", Toast.LENGTH_SHORT).show()
+        }
+    }
 
     // File picker for JSON restore
     val filePickerLauncher = rememberLauncherForActivityResult(
@@ -248,18 +311,8 @@ fun SettingsScreen(
                     SettingsRowItem(
                         icon = Icons.Default.Backup,
                         title = "হিসাবের ব্যাকআপ ফাইল তৈরি ও শেয়ার",
-                        subtitle = "সমস্ত হিসাব সুরক্ষিত JSON ফাইল হিসেবে সংরক্ষণ বা হোয়াটসঅ্যাপে শেয়ার করুন",
-                        onClick = {
-                            scope.launch {
-                                val json = onExportBackup()
-                                val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                                    type = "application/json"
-                                    putExtra(Intent.EXTRA_SUBJECT, "Hazira_Hisab_Backup.json")
-                                    putExtra(Intent.EXTRA_TEXT, json)
-                                }
-                                context.startActivity(Intent.createChooser(shareIntent, "ব্যাকআপ শেয়ার করুন"))
-                            }
-                        },
+                        subtitle = "সমস্ত হিসাব সুরক্ষিত JSON ফাইল (.json) হিসেবে ডিভাইসে সংরক্ষণ বা হোয়াটসঅ্যাপে শেয়ার করুন",
+                        onClick = { showBackupOptionsDialog = true },
                         testTag = "settings_backup_export"
                     )
 
@@ -437,6 +490,83 @@ fun SettingsScreen(
                 showResetDialog = false
             },
             onDismiss = { showResetDialog = false }
+        )
+    }
+
+    // Backup Options Dialog (Save As File vs Share File)
+    if (showBackupOptionsDialog) {
+        val todayStr = LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE)
+        val defaultFileName = "hazira_hisab_backup_$todayStr.json"
+
+        AlertDialog(
+            onDismissRequest = { showBackupOptionsDialog = false },
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.Backup,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(32.dp)
+                )
+            },
+            title = {
+                Text(
+                    text = "হিসাবের ব্যাকআপ ফাইল তৈরি",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = "আপনার সকল কাজের হাজিরা, টাকা প্রাপ্তি ও খরচের সম্পূর্ণ হিসাব দিয়ে একটি প্রকৃত '.json' ব্যাকআপ ফাইল ($defaultFileName) তৈরি হবে।",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = "আপনি ফাইলটি নিজের মোবাইলে বা Downloads-এ সেভ করতে পারেন অথবা সরাসরি হোয়াটসঅ্যাপ, ড্রাইভ ইত্যাদিতে শেয়ার করতে পারেন।",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showBackupOptionsDialog = false
+                        scope.launch {
+                            val json = onExportBackup()
+                            shareBackupAsFile(json)
+                        }
+                    },
+                    modifier = Modifier.testTag("confirm_share_backup_file_btn")
+                ) {
+                    Icon(imageVector = Icons.Default.Share, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("ফাইল শেয়ার")
+                }
+            },
+            dismissButton = {
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    TextButton(onClick = { showBackupOptionsDialog = false }) {
+                        Text("বাতিল")
+                    }
+                    OutlinedButton(
+                        onClick = {
+                            showBackupOptionsDialog = false
+                            scope.launch {
+                                val json = onExportBackup()
+                                pendingBackupJson = json
+                                createDocumentLauncher.launch(defaultFileName)
+                            }
+                        },
+                        modifier = Modifier.testTag("confirm_save_backup_file_btn")
+                    ) {
+                        Icon(imageVector = Icons.Default.Save, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("ডিভাইসে সেভ")
+                    }
+                }
+            }
         )
     }
 }
