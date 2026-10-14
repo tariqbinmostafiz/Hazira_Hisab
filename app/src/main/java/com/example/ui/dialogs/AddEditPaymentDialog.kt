@@ -58,7 +58,7 @@ fun AddEditPaymentDialog(
     initialPayment: PaymentEntity? = null,
     useBengaliDigits: Boolean,
     onDismiss: () -> Unit,
-    onSave: (date: String, amountInPoisha: Long, payer: String, note: String) -> Unit
+    onSave: (date: String, amountInPoisha: Long, payer: String, note: String, paymentTarget: String) -> Unit
 ) {
     val context = LocalContext.current
     val today = LocalDate.now()
@@ -70,6 +70,9 @@ fun AddEditPaymentDialog(
         mutableStateOf(
             if (initialPayment != null) CurrencyFormatter.poishaToTakaInput(initialPayment.amountInPoisha) else ""
         )
+    }
+    var paymentTarget by remember {
+        mutableStateOf(initialPayment?.paymentTarget ?: PaymentEntity.TARGET_CURRENT_MONTH)
     }
     var payerText by remember {
         mutableStateOf(initialPayment?.payer ?: "")
@@ -250,6 +253,47 @@ fun AddEditPaymentDialog(
 
                 Spacer(modifier = Modifier.height(14.dp))
 
+                // Payment Purpose / Target Selector
+                Text(
+                    text = "টাকা প্রাপ্তির ধরন",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontWeight = FontWeight.Medium
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    FilterChip(
+                        selected = paymentTarget == PaymentEntity.TARGET_CURRENT_MONTH,
+                        onClick = { paymentTarget = PaymentEntity.TARGET_CURRENT_MONTH },
+                        label = { Text("চলতি মাসের কাজ") },
+                        modifier = Modifier
+                            .weight(1f)
+                            .testTag("chip_target_current_month")
+                    )
+                    FilterChip(
+                        selected = paymentTarget == PaymentEntity.TARGET_PREVIOUS_DUES,
+                        onClick = { paymentTarget = PaymentEntity.TARGET_PREVIOUS_DUES },
+                        label = { Text("পূর্বের বকেয়া পরিশোধ") },
+                        modifier = Modifier
+                            .weight(1f)
+                            .testTag("chip_target_previous_dues")
+                    )
+                }
+                Text(
+                    text = if (paymentTarget == PaymentEntity.TARGET_PREVIOUS_DUES)
+                        "এই টাকা অতীতের বকেয়া পাওনা থেকে সমন্বয় হবে।"
+                    else
+                        "এই টাকা চলতি মাসের উপার্জিত আয়ের সাথে সমন্বয় হবে।",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 4.dp, start = 4.dp)
+                )
+
+                Spacer(modifier = Modifier.height(14.dp))
+
                 // Payer / Employer Name
                 Text(
                     text = "কার কাছ থেকে পেয়েছেন? (ঐচ্ছিক)",
@@ -307,7 +351,7 @@ fun AddEditPaymentDialog(
                             errorMessage = "দয়া করে টাকার সঠিক পরিমাণ লিখুন (০ এর বেশি হতে হবে)"
                             return@Button
                         }
-                        onSave(selectedDate, poisha, payerText, noteText)
+                        onSave(selectedDate, poisha, payerText, noteText, paymentTarget)
                         onDismiss()
                     },
                     modifier = Modifier

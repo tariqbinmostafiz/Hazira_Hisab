@@ -621,10 +621,23 @@ fun ReportsScreen(
 
                     // Row 3: Total Received
                     ReportDetailRow(
-                        title = "এই মাসে পাওয়া নগদ টাকা",
+                        title = "এই মাসে পাওয়া মোট নগদ টাকা",
                         value = CurrencyFormatter.formatTaka(monthlySummary.monthReceivedPoisha, useBengaliDigits),
                         valueColor = MoneyReceivedColor
                     )
+
+                    if (monthlySummary.monthPaymentsForPreviousDuesPoisha > 0L) {
+                        ReportDetailRow(
+                            title = "  └ পূর্বের বকেয়া বাবদ আদায়",
+                            value = CurrencyFormatter.formatTaka(monthlySummary.monthPaymentsForPreviousDuesPoisha, useBengaliDigits),
+                            valueColor = MoneyReceivedColor
+                        )
+                        ReportDetailRow(
+                            title = "  └ চলতি মাসের কাজের জন্য আদায়",
+                            value = CurrencyFormatter.formatTaka(monthlySummary.monthPaymentsForCurrentMonthPoisha, useBengaliDigits),
+                            valueColor = MoneyReceivedColor
+                        )
+                    }
 
                     // If dues deduction exists
                     if (monthlySummary.monthDeductedFromDuesPoisha > 0L) {
@@ -636,23 +649,26 @@ fun ReportsScreen(
                     }
 
                     // Row 4: Net due change this month
+                    val monthDueTitle = if (monthlySummary.isMonthAdvance) "চলতি মাসের অগ্রিম" else "চলতি মাসের বাকি পাওনা"
+                    val monthDueAmount = if (monthlySummary.isMonthAdvance) monthlySummary.monthAdvancePoisha else monthlySummary.monthUnpaidDuesPoisha
                     ReportDetailRow(
-                        title = "এই মাসের বকেয়া পরিবর্তন",
-                        value = CurrencyFormatter.formatTaka(monthlySummary.monthNetDueChangePoisha, useBengaliDigits),
-                        valueColor = if (monthlySummary.monthNetDueChangePoisha >= 0) MoneyDueColor else MoneyAdvanceColor
+                        title = monthDueTitle,
+                        value = CurrencyFormatter.formatTaka(monthDueAmount, useBengaliDigits),
+                        valueColor = if (monthlySummary.isMonthAdvance) MoneyAdvanceColor else MoneyDueColor
                     )
 
                     // Previous dues carry forward
                     if (monthlySummary.previousDuesPoisha != 0L) {
+                        val prevTitle = if (monthlySummary.isPreviousAdvance) "পূর্বের অগ্রিম জের" else "পূর্বের বকেয়া জের"
                         ReportDetailRow(
-                            title = "পূর্বের বকেয়া (আগের জের)",
+                            title = prevTitle,
                             value = CurrencyFormatter.formatTaka(monthlySummary.previousDuesPoisha, useBengaliDigits),
                             valueColor = if (monthlySummary.isPreviousAdvance) MoneyAdvanceColor else MoneyDueColor
                         )
                     }
 
-                    // Row 5: Total Outstanding Closing
-                    val totalDueTitle = if (monthlySummary.isTotalAdvance) "সর্বমোট অগ্রিম নেওয়া টাকা" else "বর্তমান মোট বাকি পাওনা"
+                    // Row 5: Total Outstanding Closing Across All Time
+                    val totalDueTitle = if (monthlySummary.isTotalAdvance) "সর্বমোট অগ্রিম নেওয়া টাকা" else "সর্বমোট সমাপনী বকেয়া পাওনা"
                     val totalDueAmount = if (monthlySummary.isTotalAdvance) monthlySummary.totalAdvancePoisha else monthlySummary.totalUnpaidDuesPoisha
                     val totalDueColor = if (monthlySummary.isTotalAdvance) MoneyAdvanceColor else MoneyDueColor
                     ReportDetailRow(

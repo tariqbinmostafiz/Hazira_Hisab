@@ -224,7 +224,8 @@ class LedgerViewModel(application: Application) : AndroidViewModel(application) 
         date: String,
         amountInPoisha: Long,
         payer: String,
-        note: String
+        note: String,
+        paymentTarget: String = PaymentEntity.TARGET_CURRENT_MONTH
     ) {
         viewModelScope.launch {
             val payment = PaymentEntity(
@@ -232,7 +233,8 @@ class LedgerViewModel(application: Application) : AndroidViewModel(application) 
                 date = date,
                 amountInPoisha = amountInPoisha,
                 payer = payer,
-                note = note
+                note = note,
+                paymentTarget = paymentTarget
             )
             repository.savePayment(payment)
             _snackbarMessage.emit("টাকা পাওয়ার হিসাব সংরক্ষণ করা হয়েছে")
@@ -428,6 +430,8 @@ class LedgerViewModel(application: Application) : AndroidViewModel(application) 
         var monthAtt = 0
         var monthEarned = 0L
         var monthReceived = 0L
+        var monthPaymentsForCurrent = 0L
+        var monthPaymentsForPrevious = 0L
         var monthExpense = 0L
         var monthFood = 0L
         var monthOther = 0L
@@ -447,6 +451,11 @@ class LedgerViewModel(application: Application) : AndroidViewModel(application) 
                 prevReceived += p.amountInPoisha
             } else if (p.date <= endOfMonth) {
                 monthReceived += p.amountInPoisha
+                if (p.paymentTarget == PaymentEntity.TARGET_PREVIOUS_DUES) {
+                    monthPaymentsForPrevious += p.amountInPoisha
+                } else {
+                    monthPaymentsForCurrent += p.amountInPoisha
+                }
             }
         }
 
@@ -478,6 +487,8 @@ class LedgerViewModel(application: Application) : AndroidViewModel(application) 
             monthAttendanceUnits = monthAtt,
             monthEarnedPoisha = monthEarned,
             monthReceivedPoisha = monthReceived,
+            monthPaymentsForCurrentMonthPoisha = monthPaymentsForCurrent,
+            monthPaymentsForPreviousDuesPoisha = monthPaymentsForPrevious,
             monthExpensePoisha = monthExpense,
             monthFoodExpensePoisha = monthFood,
             monthOtherExpensePoisha = monthOther,

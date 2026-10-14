@@ -117,6 +117,8 @@ class MonthlyAccountingTest {
         assertEquals(5_000_00L, octSummary.monthEarnedPoisha)
         assertEquals(2_000_00L, octSummary.monthReceivedPoisha)
         assertEquals(600_00L, octSummary.monthExpensePoisha)
+        // Home card "মোট বাকি পাওনা" (current month only): 5000 - 2000 - 100 = 2900 Tk
+        assertEquals(2_900_00L, octSummary.monthUnpaidDuesPoisha)
 
         // REPORTS numbers
         assertEquals(3_800_00L, octSummary.previousDuesPoisha)
@@ -124,5 +126,57 @@ class MonthlyAccountingTest {
         assertEquals(500_00L, octSummary.monthCashExpensesPoisha)
         assertEquals(6_700_00L, octSummary.totalUnpaidDuesPoisha)
         assertEquals(6_500_00L, octSummary.totalCashInHandPoisha)
+    }
+
+    @Test
+    fun testPaymentAllocationToPreviousDuesVsCurrentMonth() {
+        // September:
+        // Earned = 10,000 Tk, Received = 6,000 Tk -> Previous dues = 4,000 Tk
+        //
+        // October:
+        // Earned = 5,000 Tk
+        // Total received = 4,000 Tk, where:
+        //   - 3,000 Tk allocated to PREVIOUS DUES
+        //   - 1,000 Tk allocated to CURRENT MONTH
+        // Deducted from dues = 500 Tk
+        //
+        // Home Screen "মোট বাকি পাওনা" (October only):
+        // October Earned (5,000) - October Received for October (1,000) - Deductions (500) = 3,500 Tk
+        //
+        // Reports Screen:
+        // Previous dues = 4,000 Tk
+        // Previous dues paid this month = 3,000 Tk
+        // Remaining previous dues = 1,000 Tk
+        // Current month dues = 3,500 Tk
+        // Total closing dues = 1,000 + 3,500 = 4,500 Tk
+
+        val octSummary = MonthlyAccountingSummary(
+            yearMonth = YearMonth.of(2026, 10),
+            previousEarnedPoisha = 10_000_00L,
+            previousReceivedPoisha = 6_000_00L,
+            previousExpensePoisha = 1_000_00L,
+            previousDeductedFromDuesPoisha = 0L,
+            monthAttendanceUnits = 8000,
+            monthEarnedPoisha = 5_000_00L,
+            monthReceivedPoisha = 4_000_00L,
+            monthPaymentsForCurrentMonthPoisha = 1_000_00L,
+            monthPaymentsForPreviousDuesPoisha = 3_000_00L,
+            monthExpensePoisha = 800_00L,
+            monthFoodExpensePoisha = 500_00L,
+            monthOtherExpensePoisha = 300_00L,
+            monthDeductedFromDuesPoisha = 500_00L
+        )
+
+        // Home screen values (Current month only)
+        assertEquals(5_000_00L, octSummary.monthEarnedPoisha)
+        assertEquals(4_000_00L, octSummary.monthReceivedPoisha)
+        assertEquals(3_500_00L, octSummary.monthUnpaidDuesPoisha)
+        assertEquals(false, octSummary.isMonthAdvance)
+
+        // Reports screen values
+        assertEquals(4_000_00L, octSummary.previousDuesPoisha)
+        assertEquals(3_000_00L, octSummary.monthPaymentsForPreviousDuesPoisha)
+        assertEquals(1_000_00L, octSummary.remainingPreviousDuesPoisha)
+        assertEquals(4_500_00L, octSummary.totalUnpaidDuesPoisha)
     }
 }

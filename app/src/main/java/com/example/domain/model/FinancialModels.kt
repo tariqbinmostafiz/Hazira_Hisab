@@ -60,6 +60,8 @@ data class MonthlyAccountingSummary(
     val monthAttendanceUnits: Int = 0,
     val monthEarnedPoisha: Long = 0L,
     val monthReceivedPoisha: Long = 0L,
+    val monthPaymentsForCurrentMonthPoisha: Long = monthReceivedPoisha,
+    val monthPaymentsForPreviousDuesPoisha: Long = 0L,
     val monthExpensePoisha: Long = 0L,
     val monthFoodExpensePoisha: Long = 0L,
     val monthOtherExpensePoisha: Long = 0L,
@@ -78,15 +80,28 @@ data class MonthlyAccountingSummary(
     val previousUnpaidDuesPoisha: Long
         get() = if (!isPreviousAdvance) previousDuesPoisha else 0L
 
-    // 2. This Month's Net Due Change (এই মাসের বকেয়া পরিবর্তন)
-    // Earned - Received - DeductedFromDues in this month
-    val monthNetDueChangePoisha: Long
-        get() = monthEarnedPoisha - monthReceivedPoisha - monthDeductedFromDuesPoisha
+    // Remaining previous dues after payments explicitly allocated to previous dues
+    val remainingPreviousDuesPoisha: Long
+        get() = (previousDuesPoisha - monthPaymentsForPreviousDuesPoisha).coerceAtLeast(0L)
 
-    // 3. Total Outstanding / Closing Due (সর্বমোট বর্তমান বকেয়া)
-    // previousDuesPoisha + monthNetDueChangePoisha
+    // 2. Current Month's Dues Calculation (চলতি মাসের নিজস্ব বাকি পাওনা)
+    // Formula: current-month earned income - payments allocated to current-month earnings - expenses explicitly deducted from current-month dues
+    val monthNetDueChangePoisha: Long
+        get() = monthEarnedPoisha - monthPaymentsForCurrentMonthPoisha - monthDeductedFromDuesPoisha
+
+    val isMonthAdvance: Boolean
+        get() = monthNetDueChangePoisha < 0L
+
+    val monthAdvancePoisha: Long
+        get() = if (isMonthAdvance) -monthNetDueChangePoisha else 0L
+
+    val monthUnpaidDuesPoisha: Long
+        get() = if (!isMonthAdvance) monthNetDueChangePoisha else 0L
+
+    // 3. Total Outstanding / Closing Due Across All Time (সর্বমোট বকেয়া পাওনা)
+    // previousDuesPoisha + monthEarnedPoisha - monthReceivedPoisha - monthDeductedFromDuesPoisha
     val totalOutstandingPoisha: Long
-        get() = previousDuesPoisha + monthNetDueChangePoisha
+        get() = previousDuesPoisha + monthEarnedPoisha - monthReceivedPoisha - monthDeductedFromDuesPoisha
 
     val isTotalAdvance: Boolean
         get() = totalOutstandingPoisha < 0L

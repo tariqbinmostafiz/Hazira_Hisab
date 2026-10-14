@@ -190,13 +190,19 @@ class LedgerRepository(
 
             for (p in payments) {
                 val source = if (p.payer.isNotBlank()) "মালিক: ${p.payer}" else "টাকা আদায়"
+                val subtitleText = when {
+                    p.isForPreviousDues && p.note.isNotBlank() -> "পূর্বের বকেয়া পরিশোধ • ${p.note}"
+                    p.isForPreviousDues -> "পূর্বের বকেয়া পরিশোধ বাবদ"
+                    p.note.isNotBlank() -> p.note
+                    else -> "টাকা পরিশোধ পেয়েছেন"
+                }
                 list.add(
                     RecentActivityItem(
                         id = p.id,
                         type = TransactionType.PAYMENT,
                         date = p.date,
                         title = source,
-                        subtitle = if (p.note.isNotBlank()) p.note else "টাকা পরিশোধ পেয়েছেন",
+                        subtitle = subtitleText,
                         amountPoisha = p.amountInPoisha,
                         timestamp = p.createdAt
                     )
@@ -377,6 +383,7 @@ class LedgerRepository(
             obj.put("amountInPoisha", p.amountInPoisha)
             obj.put("payer", p.payer)
             obj.put("note", p.note)
+            obj.put("paymentTarget", p.paymentTarget)
             paymentsArray.put(obj)
         }
         root.put("payments", paymentsArray)
@@ -439,7 +446,8 @@ class LedgerRepository(
                         date = obj.optString("date", CurrencyFormatter.todayIso()),
                         amountInPoisha = obj.optLong("amountInPoisha", 0L),
                         payer = obj.optString("payer", ""),
-                        note = obj.optString("note", "")
+                        note = obj.optString("note", ""),
+                        paymentTarget = obj.optString("paymentTarget", PaymentEntity.TARGET_CURRENT_MONTH)
                     )
                 )
                 count++

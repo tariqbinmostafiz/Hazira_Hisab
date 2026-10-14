@@ -297,13 +297,14 @@ fun MainAppNavigation(viewModel: LedgerViewModel) {
                             showPaymentDialog = false
                             paymentToEdit = null
                         },
-                        onSave = { date, amount, payer, note ->
+                        onSave = { date, amount, payer, note, paymentTarget ->
                             viewModel.savePayment(
                                 id = paymentToEdit?.id ?: 0L,
                                 date = date,
                                 amountInPoisha = amount,
                                 payer = payer,
-                                note = note
+                                note = note,
+                                paymentTarget = paymentTarget
                             )
                             showPaymentDialog = false
                             paymentToEdit = null
