@@ -18,6 +18,7 @@ data class ExpenseEntity(
     companion object {
         const val SOURCE_CASH = "CASH"
         const val SOURCE_FROM_DUES = "FROM_DUES"
+        const val SOURCE_DEDUCTED_FROM_DUES = SOURCE_FROM_DUES
     }
 
     val isDeductedFromDues: Boolean

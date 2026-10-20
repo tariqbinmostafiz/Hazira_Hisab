@@ -2,6 +2,7 @@ package com.shifat.hajirahisab.ui.navigation
 
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -104,18 +105,27 @@ fun AppNavigation(
         topBar = {
             TopAppBar(
                 title = {
-                    Text(
-                        text = when (currentScreen) {
-                            Screen.HOME -> "হাজিরা হিসাব"
-                            Screen.WORK -> "কাজের হাজিরা খাতা"
-                            Screen.PAYMENT -> "টাকা পাওয়ার খাতা"
-                            Screen.EXPENSE -> "খরচের খাতা"
-                            Screen.REPORT -> "মাসিক হিসাব রিপোর্ট"
-                            Screen.SETTINGS -> "সেটিংস"
-                        },
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Column {
+                        Text(
+                            text = when (currentScreen) {
+                                Screen.HOME -> "হাজিরা হিসাব"
+                                Screen.WORK -> "কাজের হাজিরা খাতা"
+                                Screen.PAYMENT -> "টাকা পাওয়ার খাতা"
+                                Screen.EXPENSE -> "খরচের খাতা"
+                                Screen.REPORT -> "হিসাবের রিপোর্ট"
+                                Screen.SETTINGS -> "সেটিংস"
+                            },
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold
+                        )
+                        if (currentScreen == Screen.REPORT) {
+                            Text(
+                                text = "মাসভিত্তিক আয়, খরচ ও বকেয়ার বিস্তারিত হিসাব",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
                 },
                 navigationIcon = {
                     if (!isTopLevelDestination) {

@@ -65,6 +65,7 @@ import com.shifat.hajirahisab.ui.dialogs.AddEditWorkDialog
 import com.shifat.hajirahisab.ui.theme.MoneyDueColor
 import com.shifat.hajirahisab.ui.theme.MoneyEarnedColor
 import com.shifat.hajirahisab.ui.theme.MoneyExpenseColor
+import com.shifat.hajirahisab.ui.theme.MoneyNetIncomeColor
 import com.shifat.hajirahisab.ui.theme.MoneyReceivedColor
 import com.shifat.hajirahisab.ui.viewmodel.LedgerViewModel
 import java.time.LocalDate
@@ -116,8 +117,8 @@ fun DashboardScreen(
             ) {
                 Column {
                     Text(
-                        text = "হাজিরা হিসাব",
-                        style = MaterialTheme.typography.headlineMedium,
+                        text = "ডিজিটাল খাতা ও দৈনিক হিসাব",
+                        style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
@@ -126,7 +127,7 @@ fun DashboardScreen(
                         text = todayBengaliDateStr,
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Medium
+                        fontWeight = FontWeight.SemiBold
                     )
                 }
 
@@ -274,6 +275,70 @@ fun DashboardScreen(
                     testTag = "home_total_expense_card",
                     onClick = onNavigateToExpense
                 )
+            }
+
+            // Section 5 & 6: Replace old cash card with এই মাসের নিট আয়
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("home_net_income_card"),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(42.dp)
+                                .clip(CircleShape)
+                                .background(MoneyNetIncomeColor.copy(alpha = 0.12f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.AccountBalanceWallet,
+                                contentDescription = null,
+                                tint = MoneyNetIncomeColor,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(12.dp))
+
+                        Column {
+                            Text(
+                                text = "এই মাসের নিট আয়",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = "প্রাপ্য আয় (${CurrencyFormatter.formatTaka(currentMonthSummary.monthEarnedPoisha, useBengaliDigits)}) - মোট খরচ (${CurrencyFormatter.formatTaka(currentMonthSummary.monthExpensePoisha, useBengaliDigits)})",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    Text(
+                        text = CurrencyFormatter.formatTaka(currentMonthSummary.monthNetIncomePoisha, useBengaliDigits),
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MoneyNetIncomeColor
+                    )
+                }
             }
         }
 

@@ -13,7 +13,7 @@ android {
         applicationId = "com.shifat.hajirahisab"
         minSdk = 24
         targetSdk = 36
-        versionCode = 4
+        versionCode = 5
         versionName = "2.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -22,9 +22,9 @@ android {
     signingConfigs {
         create("release") {
             storeFile = file("../debug.keystore")
-            storePassword = "androiddebugkey"
+            storePassword = "android"
             keyAlias = "androiddebugkey"
-            keyPassword = "androiddebugkey"
+            keyPassword = "android"
         }
     }
 

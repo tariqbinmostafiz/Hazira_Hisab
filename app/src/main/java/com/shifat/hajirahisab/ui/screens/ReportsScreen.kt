@@ -37,9 +37,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.foundation.clickable
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -71,6 +73,11 @@ fun ReportsScreen(
     val monthlySummary by viewModel.monthlySummary.collectAsState()
     val monthActivities by viewModel.monthActivities.collectAsState()
     val useBengaliDigits by viewModel.useBengaliDigits.collectAsState()
+    val availableMonths by viewModel.availableMonths.collectAsState()
+    val works by viewModel.workEntries.collectAsState()
+    val pays by viewModel.payments.collectAsState()
+    val exps by viewModel.expenses.collectAsState()
+    val overallSummary by viewModel.overallSummary.collectAsState()
 
     val isCurrentCalendarMonth = selectedMonth == YearMonth.now()
 
@@ -384,6 +391,178 @@ fun ReportsScreen(
                 monthActivities.forEach { item ->
                     RecentActivityRow(item = item, useBengaliDigits = useBengaliDigits)
                 }
+            }
+        }
+
+        // Section 5: মাসভিত্তিক পূর্ববর্তী ইতিহাস (Section 8.F - Monthly History, newest first)
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text(
+                text = "৫. সকল মাসের ইতিহাস ও তুলনা (${CurrencyFormatter.formatNumber(availableMonths.size.toLong(), useBengaliDigits)}টি মাস)",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+
+            availableMonths.forEach { m ->
+                val itemSummary = remember(m, works, pays, exps) {
+                    viewModel.calculateMonthlySummary(m, works, pays, exps)
+                }
+                val isSelected = m == selectedMonth
+
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("month_history_${m}")
+                        .clickable { viewModel.selectMonth(m) },
+                    shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (isSelected) {
+                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
+                        } else {
+                            MaterialTheme.colorScheme.surface
+                        }
+                    ),
+                    elevation = CardDefaults.cardElevation(defaultElevation = if (isSelected) 2.dp else 1.dp)
+                ) {
+                    Column(modifier = Modifier.padding(14.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = CurrencyFormatter.formatYearMonthBengali(m, useBengaliDigits),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                )
+                                if (isSelected) {
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Surface(
+                                        color = MaterialTheme.colorScheme.primary,
+                                        shape = RoundedCornerShape(6.dp)
+                                    ) {
+                                        Text(
+                                            text = "নির্বাচিত",
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onPrimary,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                }
+                            }
+
+                            Text(
+                                text = "নিট: ${CurrencyFormatter.formatTaka(itemSummary.monthNetIncomePoisha, useBengaliDigits)}",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MoneyNetIncomeColor
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "হাজিরা: ${CurrencyFormatter.formatAttendance(itemSummary.monthAttendanceUnits, useBengaliDigits)}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                text = "আয়: ${CurrencyFormatter.formatTaka(itemSummary.monthEarnedPoisha, useBengaliDigits)}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MoneyEarnedColor
+                            )
+                            Text(
+                                text = "প্রাপ্তি: ${CurrencyFormatter.formatTaka(itemSummary.monthReceivedPoisha, useBengaliDigits)}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MoneyReceivedColor
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "খরচ: ${CurrencyFormatter.formatTaka(itemSummary.monthExpensePoisha, useBengaliDigits)}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MoneyExpenseColor
+                            )
+                            Text(
+                                text = "মাসের বকেয়া: ${CurrencyFormatter.formatTaka(itemSummary.totalUnpaidDuesPoisha, useBengaliDigits)}",
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MoneyDueColor
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // Section 6: সর্বমোট সার্বিক হিসাব (Section 8.G - Overall Summary across all time)
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag("reports_all_time_summary_card"),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+            )
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(
+                    text = "৬. সর্বমোট সার্বিক হিসাব (আজ পর্যন্ত মোট)",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                ReportRowItem(
+                    label = "সর্বমোট হাজিরা:",
+                    value = CurrencyFormatter.formatAttendance(overallSummary.totalAttendanceUnits, useBengaliDigits),
+                    valueColor = MoneyEarnedColor
+                )
+                ReportRowItem(
+                    label = "সর্বমোট অর্জিত আয়:",
+                    value = CurrencyFormatter.formatTaka(overallSummary.totalEarnedPoisha, useBengaliDigits),
+                    valueColor = MoneyEarnedColor
+                )
+                ReportRowItem(
+                    label = "সর্বমোট পাওয়া টাকা:",
+                    value = CurrencyFormatter.formatTaka(overallSummary.totalReceivedPoisha, useBengaliDigits),
+                    valueColor = MoneyReceivedColor
+                )
+                ReportRowItem(
+                    label = "সর্বমোট খরচ:",
+                    value = CurrencyFormatter.formatTaka(overallSummary.totalExpensePoisha, useBengaliDigits),
+                    valueColor = MoneyExpenseColor
+                )
+                ReportRowItem(
+                    label = "সর্বমোট নিট আয়:",
+                    value = CurrencyFormatter.formatTaka(overallSummary.netIncomePoisha, useBengaliDigits),
+                    valueColor = MoneyNetIncomeColor,
+                    isBold = true
+                )
+
+                HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp))
+
+                ReportRowItem(
+                    label = "সর্বমোট পাওনা বকেয়া:",
+                    value = CurrencyFormatter.formatTaka(overallSummary.unpaidDuesPoisha, useBengaliDigits),
+                    valueColor = MoneyDueColor,
+                    isBold = true
+                )
             }
         }
 

@@ -137,13 +137,6 @@ fun SettingsScreen(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Text(
-            text = "সেটিংস ও পছন্দসমূহ",
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-
         // Preferences Card
         Card(
             modifier = Modifier.fillMaxWidth(),

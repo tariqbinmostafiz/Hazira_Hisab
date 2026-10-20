@@ -273,7 +273,7 @@ private fun PaymentEntryCard(
                 Spacer(modifier = Modifier.height(4.dp))
 
                 val details = buildString {
-                    if (payment.payer.isNotBlank()) append("প্রদানকারী: ${payment.payer}")
+                    if (payment.payer.isNotBlank()) append("মালিক: ${payment.payer}")
                     if (payment.note.isNotBlank()) {
                         if (isNotEmpty()) append(" • ")
                         append(payment.note)
